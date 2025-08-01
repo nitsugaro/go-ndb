@@ -1,0 +1,14 @@
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/hashicorp/golang-lru v1.0.2 h1:dV3g9Z/unq5DpblPpw+Oqcv4dU/1omnb4Ok8iPY6p1c=
+github.com/hashicorp/golang-lru v1.0.2/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
+github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
+github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
+github.com/nitsugaro/go-conf v1.1.1 h1:2o7oBLBPGPlfRSY/rg/+sJCxArvFJgvj+RIOQTlbwrs=
+github.com/nitsugaro/go-conf v1.1.1/go.mod h1:byTsG0PN1Eo4z7MfS5EVeFJP5zpwgcYy0As1KURA8uw=
+github.com/nitsugaro/go-conf v1.2.0 h1:WXToCium3/vBmL2y57JAXC5yav6xGEE+XFhuYMlmCbs=
+github.com/nitsugaro/go-conf v1.2.0/go.mod h1:byTsG0PN1Eo4z7MfS5EVeFJP5zpwgcYy0As1KURA8uw=
+github.com/nitsugaro/go-nstore v1.0.0 h1:VJqnjMaLmR9SveQ1xK0bl8FBIjEDn9dTocf5ViAkNxs=
+github.com/nitsugaro/go-nstore v1.0.0/go.mod h1:dSIYRjpB/59IxGaF7Upn2NPEmFuvWjrhyZV+ZEJvoUo=
+github.com/nitsugaro/go-utils v1.3.1 h1:UWgFg+9ujSbWD4J+ZlzitZcz3hn9cwEcOi2OX6iMfjE=
+github.com/nitsugaro/go-utils v1.3.1/go.mod h1:AQux4TPJTJGodqapum4hWNIAr1VYWi5Z3zscOq4z8l4=
