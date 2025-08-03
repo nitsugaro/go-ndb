@@ -54,6 +54,7 @@ type Field struct {
 	EnumValues []string    `json:"enum_values,omitempty"`
 	Pattern    *string     `json:"pattern,omitempty"`
 	Comment    string      `json:"comment,omitempty"`
+	Metadata   M           `json:"metadata,omitempty"`
 }
 
 type Schema struct {
@@ -110,4 +111,8 @@ func (s *Schema) RemoveField(name string) bool {
 	s.Fields = newFields
 
 	return true
+}
+
+func (f *Field) GetMetadata() *goutils.TreeMap {
+	return goutils.NewTreeMap(f.Metadata)
 }
