@@ -113,6 +113,6 @@ func (s *Schema) RemoveField(name string) bool {
 	return true
 }
 
-func (f *Field) GetMetadata() *goutils.TreeMap {
+func (f *Field) GetMetadata() goutils.TreeMapImpl {
 	return goutils.NewTreeMap(f.Metadata)
 }

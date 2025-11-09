@@ -12,3 +12,5 @@ github.com/nitsugaro/go-nstore v1.0.0 h1:VJqnjMaLmR9SveQ1xK0bl8FBIjEDn9dTocf5ViA
 github.com/nitsugaro/go-nstore v1.0.0/go.mod h1:dSIYRjpB/59IxGaF7Upn2NPEmFuvWjrhyZV+ZEJvoUo=
 github.com/nitsugaro/go-utils v1.3.1 h1:UWgFg+9ujSbWD4J+ZlzitZcz3hn9cwEcOi2OX6iMfjE=
 github.com/nitsugaro/go-utils v1.3.1/go.mod h1:AQux4TPJTJGodqapum4hWNIAr1VYWi5Z3zscOq4z8l4=
+github.com/nitsugaro/go-utils v1.5.2 h1:j0XP47gMK8HhUzMjm21Tj2R13W7byrNdNyMQKYQvC+Q=
+github.com/nitsugaro/go-utils v1.5.2/go.mod h1:/nBqCxV7aFYROuvVEdrfzbT9DrjkA86Rso/WdT4Z4uY=
