@@ -93,22 +93,22 @@ func Fg(fields ...*SQLField) []*SQLField {
 }
 
 func F(name string) *SQLField {
-	return &SQLField{Name: name, Operators: []*SQLOperation{}}
+	return &SQLField{PName: name, POperators: []*SQLOperation{}}
 }
 
 func Fs(names ...string) []*SQLField {
-	return goutils.Map(names, func(name string, _ int) *SQLField { return &SQLField{Name: name, Operators: []*SQLOperation{}} })
+	return goutils.Map(names, func(name string, _ int) *SQLField { return &SQLField{PName: name, POperators: []*SQLOperation{}} })
 }
 
 func (f *SQLField) GerForQuery(schemaPrefix string) (string, error) {
-	name, err := FormatSQLField(schemaPrefix, f.Name)
+	name, err := FormatSQLField(schemaPrefix, f.PName)
 	if err != nil {
 		return "", err
 	}
 
-	goutils.ForEach(f.Operators, func(op *SQLOperation, _ int) {
-		if funcs[op.Op] != nil {
-			name = funcs[op.Op](name, op.Args...)
+	goutils.ForEach(f.POperators, func(op *SQLOperation, _ int) {
+		if funcs[op.POp] != nil {
+			name = funcs[op.POp](name, op.PArgs...)
 		}
 	})
 
@@ -116,7 +116,7 @@ func (f *SQLField) GerForQuery(schemaPrefix string) (string, error) {
 }
 
 func (f *SQLField) addFunc(op Operation, args ...string) *SQLField {
-	f.Operators = append(f.Operators, &SQLOperation{Op: op, Args: args})
+	f.POperators = append(f.POperators, &SQLOperation{POp: op, PArgs: args})
 	return f
 }
 

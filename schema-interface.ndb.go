@@ -9,20 +9,20 @@ import (
 )
 
 type ForeignKey struct {
-	Schema_   string         `json:"schema"`
-	Column_   string         `json:"column"`
-	OnDelete_ ForeignKeyRule `json:"on_delete,omitempty"`
-	OnUpdate_ ForeignKeyRule `json:"on_update,omitempty"`
+	PSchema   string         `json:"schema"`
+	PColumn   string         `json:"column"`
+	POnDelete ForeignKeyRule `json:"on_delete,omitempty"`
+	POnUpdate ForeignKeyRule `json:"on_update,omitempty"`
 	f         *SchemaField
 }
 
 func (fk *ForeignKey) OnUpdate(OnUpdate ForeignKeyRule) *ForeignKey {
-	fk.OnUpdate_ = OnUpdate
+	fk.POnUpdate = OnUpdate
 	return fk
 }
 
 func (fk *ForeignKey) OnDelete(onDelete ForeignKeyRule) *ForeignKey {
-	fk.OnDelete_ = onDelete
+	fk.POnDelete = onDelete
 	return fk
 }
 
@@ -31,24 +31,24 @@ func (fk *ForeignKey) DoneFK() *SchemaField {
 }
 
 func (fk *ForeignKey) Validate() error {
-	if len(fk.Schema_) == 0 || len(fk.Column_) == 0 {
+	if len(fk.PSchema) == 0 || len(fk.PColumn) == 0 {
 		return errors.New("schema & column fields are required")
 	}
 
-	if err := IsSQLName(fk.Schema_); err != nil {
+	if err := IsSQLName(fk.PSchema); err != nil {
 		return err
 	}
 
-	if err := IsSQLName(fk.Column_); err != nil {
+	if err := IsSQLName(fk.PColumn); err != nil {
 		return err
 	}
 
-	if fk.OnDelete_ != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.OnDelete_ }) {
-		return fmt.Errorf("invalid on delete clausure: %s", fk.OnDelete_)
+	if fk.POnDelete != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.POnDelete }) {
+		return fmt.Errorf("invalid on delete clausure: %s", fk.POnDelete)
 	}
 
-	if fk.OnUpdate_ != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.OnUpdate_ }) {
-		return fmt.Errorf("invalid on update clausure: %s", fk.OnUpdate_)
+	if fk.POnUpdate != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.POnUpdate }) {
+		return fmt.Errorf("invalid on update clausure: %s", fk.POnUpdate)
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func (f *SchemaField) Enum(values ...string) *SchemaField {
 }
 
 func (f *SchemaField) NewFK(schema string, column string) *ForeignKey {
-	f.PForeignKey = &ForeignKey{f: f, Schema_: schema, Column_: column}
+	f.PForeignKey = &ForeignKey{f: f, PSchema: schema, PColumn: column}
 
 	return f.PForeignKey
 }
@@ -126,6 +126,15 @@ func (f *SchemaField) DoneField() *Schema {
 	return f.s
 }
 
+func (f *SchemaField) Metadata(m M) *SchemaField {
+	f.PMetadata = m
+	return f
+}
+
+func (f *SchemaField) GetMetadata() goutils.TreeMapImpl {
+	return goutils.NewTreeMap(f.PMetadata)
+}
+
 type Schema struct {
 	*nstore.Metadata
 	PName                string         `json:"name"`
@@ -136,6 +145,7 @@ type Schema struct {
 	PUniqueIndexes       [][]string     `json:"unique_indexes,omitempty"`
 	PCompositePrimaryKey []string       `json:"composite_primary_key,omitempty"`
 	PCompositeUniqueKeys [][]string     `json:"composite_unique_keys,omitempty"`
+	PMetadata            M              `json:"composite_unique_keys,omitempty"`
 	err                  error          `json:"-"`
 }
 
@@ -253,6 +263,11 @@ func (s *Schema) RemoveField(name string) *Schema {
 	return s
 }
 
-func (f *SchemaField) GetMetadata() goutils.TreeMapImpl {
-	return goutils.NewTreeMap(f.PMetadata)
+func (f *Schema) AddMetadata(key string, val any) *Schema {
+	f.PMetadata[key] = val
+	return f
+}
+
+func (f *Schema) GetSchemaMetadata() M {
+	return f.PMetadata
 }

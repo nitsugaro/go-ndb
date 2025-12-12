@@ -46,12 +46,12 @@ func (d *DBBridge) generateCreateSchemaSQL(t *Schema) string {
 			line += fmt.Sprintf(" DEFAULT %s", *f.PDefault)
 		}
 		if f.PForeignKey != nil {
-			line += fmt.Sprintf(" REFERENCES \"%s\"(%s)", d.schemaPrefix+f.PForeignKey.Schema_, f.PForeignKey.Column_)
-			if f.PForeignKey.OnDelete_ != "" {
-				line += " ON DELETE " + string(f.PForeignKey.OnDelete_)
+			line += fmt.Sprintf(" REFERENCES \"%s\"(%s)", d.schemaPrefix+f.PForeignKey.PSchema, f.PForeignKey.PColumn)
+			if f.PForeignKey.POnDelete != "" {
+				line += " ON DELETE " + string(f.PForeignKey.POnDelete)
 			}
-			if f.PForeignKey.OnUpdate_ != "" {
-				line += " ON UPDATE " + string(f.PForeignKey.OnUpdate_)
+			if f.PForeignKey.POnUpdate != "" {
+				line += " ON UPDATE " + string(f.PForeignKey.POnUpdate)
 			}
 		}
 

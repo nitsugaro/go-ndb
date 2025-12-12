@@ -20,7 +20,7 @@ func (dbb *DBBridge) BuildUpdateQuery(updateQuery *Query, returning bool) (strin
 	}
 
 	if updateQuery.RPayload != nil {
-		if err := dbb.ValidateSchema(updateQuery.Schema, UPDATE, updateQuery.RPayload); err != nil {
+		if err := dbb.ValidateSchema(updateQuery.PSchema, UPDATE, updateQuery.RPayload); err != nil {
 			return "", nil, err
 		}
 

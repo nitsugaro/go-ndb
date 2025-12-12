@@ -2,19 +2,14 @@ package ndb
 
 import "encoding/json"
 
-func (b *DBBridge) ReadOne(readOneQuery *Query) (any, error) {
+func (b *DBBridge) ReadOne(readOneQuery *Query) (M, error) {
 	result, err := b.Read(readOneQuery.Limit(1))
 	if err != nil {
 		return nil, err
 	}
 
-	val, ok := result.([]M)
-	if !ok {
-		return nil, ErrConvert
-	}
-
-	if len(val) == 1 {
-		return val[0], nil
+	if len(result) == 1 {
+		return result[0], nil
 	} else {
 		return nil, nil
 	}

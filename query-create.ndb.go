@@ -29,7 +29,7 @@ func (dbb *DBBridge) BuildCreateQuery(createQuery *Query) (string, []any, error)
 	)
 
 	if createQuery.RPayload != nil {
-		if err := dbb.ValidateSchema(createQuery.Schema, CREATE, createQuery.RPayload); err != nil {
+		if err := dbb.ValidateSchema(createQuery.PSchema, CREATE, createQuery.RPayload); err != nil {
 			return "", nil, err
 		}
 

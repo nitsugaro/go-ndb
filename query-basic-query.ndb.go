@@ -5,25 +5,13 @@ import (
 )
 
 type BasicSchema struct {
-	Schema string `json:"schema,omitempty"`
+	PSchema string `json:"schema,omitempty"`
 }
 
 type SubQuery struct {
 	queryName string
 	fields    []*SQLField
 	*Query
-}
-
-type SQLOperation struct {
-	Op   Operation `json:"operation,omitempty"`
-	Args []string  `json:"args,omitempty"`
-}
-
-type SQLField struct {
-	Name      string          `json:"name,omitempty"`
-	Operators []*SQLOperation `json:"operators,omitempty"`
-
-	q *Query
 }
 
 type Query struct {
@@ -67,16 +55,20 @@ func (q *Query) String() string {
 	return string(bytes)
 }
 
+func (bs *BasicSchema) GetSchemaName() string {
+	return bs.PSchema
+}
+
 func (bt *BasicSchema) GetSchema(db *DBBridge) (string, error) {
-	if bt.Schema == "" {
+	if bt.PSchema == "" {
 		return "", ErrNotFoundTable
 	}
 
-	return "\"" + db.GetSchemaPrefix() + bt.Schema + "\"", nil
+	return "\"" + db.GetSchemaPrefix() + bt.PSchema + "\"", nil
 }
 
 func newQuery(table string, typ QueryType) *Query {
-	return &Query{typ: typ, BasicSchema: &BasicSchema{Schema: table}}
+	return &Query{typ: typ, BasicSchema: &BasicSchema{PSchema: table}}
 }
 
 func NewReadQuery(table string) *Query { return newQuery(table, READ) }

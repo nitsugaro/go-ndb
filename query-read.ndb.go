@@ -84,7 +84,7 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 
 		onArgs, newPos, err := dbb.buildConditionClauseB(query, join.POn, pos, "")
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid ON clause for join %s: %w", join.Schema, err)
+			return "", nil, fmt.Errorf("invalid ON clause for join %s: %w", join.PSchema, err)
 		}
 		pos = newPos
 		args = append(args, onArgs...)
@@ -110,7 +110,7 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 		if fields, err := ValidParseSqlFields(dbb.schemaPrefix, readQuery.POrderBy[:len(readQuery.POrderBy)-1]); err != nil {
 			return "", nil, err
 		} else {
-			order := strings.ToUpper(readQuery.POrderBy[len(readQuery.POrderBy)-1].Name)
+			order := strings.ToUpper(readQuery.POrderBy[len(readQuery.POrderBy)-1].PName)
 			if order == "ASC" || order == "DESC" {
 				query.WriteString(" ORDER BY ")
 				query.WriteString(strings.Join(fields, ","))
@@ -136,7 +136,7 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 	return queryStr, args, nil
 }
 
-func (dbb *DBBridge) Read(readQuery *Query) (any, error) {
+func (dbb *DBBridge) Read(readQuery *Query) ([]M, error) {
 	if query, args, err := dbb.BuildReadQuery(readQuery); err != nil {
 		return nil, err
 	} else {

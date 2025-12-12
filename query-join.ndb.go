@@ -19,7 +19,7 @@ func (j *Join) DoneJoin() *Query {
 
 func NewInnerJoin(schema string, on ...M) *Join {
 	return &Join{
-		BasicSchema: &BasicSchema{Schema: schema},
+		BasicSchema: &BasicSchema{PSchema: schema},
 		PTyp:        INNER_JOIN,
 		POn:         on,
 	}
@@ -27,7 +27,7 @@ func NewInnerJoin(schema string, on ...M) *Join {
 
 func NewLeftJoin(schema string, on ...M) *Join {
 	return &Join{
-		BasicSchema: &BasicSchema{Schema: schema},
+		BasicSchema: &BasicSchema{PSchema: schema},
 		PTyp:        LEFT_JOIN,
 		POn:         on,
 	}
@@ -35,7 +35,7 @@ func NewLeftJoin(schema string, on ...M) *Join {
 
 func NewRightJoin(schema string, on ...M) *Join {
 	return &Join{
-		BasicSchema: &BasicSchema{Schema: schema},
+		BasicSchema: &BasicSchema{PSchema: schema},
 		PTyp:        RIGHT_JOIN,
 		POn:         on,
 	}
@@ -43,7 +43,7 @@ func NewRightJoin(schema string, on ...M) *Join {
 
 func NewFullJoin(schema string, on ...M) *Join {
 	return &Join{
-		BasicSchema: &BasicSchema{Schema: schema},
+		BasicSchema: &BasicSchema{PSchema: schema},
 		PTyp:        FULL_JOIN,
 		POn:         on,
 	}
@@ -51,7 +51,7 @@ func NewFullJoin(schema string, on ...M) *Join {
 
 func NewCrossJoin(schema string, on ...M) *Join {
 	return &Join{
-		BasicSchema: &BasicSchema{Schema: schema},
+		BasicSchema: &BasicSchema{PSchema: schema},
 		PTyp:        CROSS_JOIN,
 		POn:         on,
 	}

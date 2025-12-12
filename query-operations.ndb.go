@@ -3,7 +3,7 @@ package ndb
 import goutils "github.com/nitsugaro/go-utils"
 
 func (q *Query) NewField(name string) *SQLField {
-	f := &SQLField{q: q, Name: name, Operators: []*SQLOperation{}}
+	f := &SQLField{q: q, PName: name, POperators: []*SQLOperation{}}
 	q.PFields = append(q.PFields, f)
 	return f
 }
@@ -24,7 +24,7 @@ func (q *Query) Payload(payload M) *Query {
 }
 
 func (q *Query) NewJoin(schema string, typ JoinType) *Join {
-	j := &Join{PTyp: typ, q: q, BasicSchema: &BasicSchema{Schema: schema}, POn: []M{}}
+	j := &Join{PTyp: typ, q: q, BasicSchema: &BasicSchema{PSchema: schema}, POn: []M{}}
 	q.PJoins = append(q.PJoins, j)
 	return j
 }
@@ -64,7 +64,11 @@ func (q *Query) SubQueryName(queryName string, query *Query, fields []*SQLField)
 }
 
 func (q *Query) AddField(field *SQLField) *Query {
-	q.PFields = append(q.PFields, field)
+	if goutils.All(q.PFields, func(f *SQLField, _ int) bool {
+		return f.PName != field.PName || len(f.POperators) != len(field.POperators)
+	}) {
+		q.PFields = append(q.PFields, field)
+	}
 	return q
 }
 
@@ -81,6 +85,18 @@ func (q *Query) AddWhere(condition M) *Query {
 func (q *Query) AddPayload(key string, value any) *Query {
 	q.RPayload[key] = value
 	return q
+}
+
+func (q *Query) GetJoins() []*Join {
+	return q.PJoins
+}
+
+func (q *Query) GetFields() []*SQLField {
+	return q.PFields
+}
+
+func (q *Query) GetWhere() []M {
+	return q.PWhere
 }
 
 func (q *Query) GetPayload() M {
