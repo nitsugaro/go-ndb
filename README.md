@@ -22,7 +22,7 @@ This library ensures **safety, predictability and strict API structure**.
 ## 📦 Installation
 
 ```bash
-go get github.com/nitsugaro/go-ndb@v1.1.0
+go get github.com/nitsugaro/go-ndb@v1.1.1
 ```
 
 ---
