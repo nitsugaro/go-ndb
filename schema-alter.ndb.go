@@ -3,24 +3,18 @@ package ndb
 import (
 	"fmt"
 	"strings"
-)
 
-type AlterAction string
-
-const (
-	AddColumn   AlterAction = "add"
-	AlterColumn AlterAction = "alter"
-	DropColumn  AlterAction = "drop"
+	goutils "github.com/nitsugaro/go-utils"
 )
 
 type AlterOptions struct {
 	NewName   *string `json:"new_name"`
-	OldUnique *bool
-	IndexName *string
+	OldUnique *bool   `json:"old_unique"`
+	IndexName *string `json:"index_name"`
 }
 
 type AlterField struct {
-	Field        *Field        `json:"field"`
+	Field        *SchemaField  `json:"field"`
 	AlterAction  AlterAction   `json:"alter_action"`
 	AlterOptions *AlterOptions `json:"alter_options"`
 }
@@ -39,6 +33,7 @@ func (dbb *DBBridge) generateAlterSchemaSQL(schemaName string, fields []*AlterFi
 	}
 
 	newSchema := Ptr(*schema)
+	newSchema.PFields = goutils.Map(newSchema.PFields, func(f *SchemaField, _ int) *SchemaField { return Ptr(*f) })
 	for _, field := range fields {
 		f := field.Field
 		action := field.AlterAction
@@ -46,62 +41,62 @@ func (dbb *DBBridge) generateAlterSchemaSQL(schemaName string, fields []*AlterFi
 
 		var sb strings.Builder
 		switch action {
-		case AddColumn:
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", fullTableName, f.Name, string(f.Type)))
-			if f.Type == FieldVarchar && f.Max != nil {
+		case ADD_COLUMN:
+			sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", fullTableName, f.PName, string(f.PType)))
+			if f.PType == FIELD_VARCHAR && f.PMax != nil {
 				sb.Reset()
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s(%d)", fullTableName, f.Name, f.Type, *f.Max))
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s(%d)", fullTableName, f.PName, f.PType, *f.PMax))
 			}
-			if !f.Nullable {
+			if !f.PNullable {
 				sb.WriteString(" NOT NULL")
 			}
-			if f.Default != nil {
-				sb.WriteString(fmt.Sprintf(" DEFAULT %s", *f.Default))
+			if f.PDefault != nil {
+				sb.WriteString(fmt.Sprintf(" DEFAULT %s", *f.PDefault))
 			}
 			sb.WriteString(";\n")
 
-			if f.Unique {
-				colName := f.Name
+			if f.PUnique {
+				colName := f.PName
 				indexName := genIndexName(schemaName, colName)
 				if opts != nil && opts.IndexName != nil {
 					indexName = *opts.IndexName
 				}
 				sb.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);\n", indexName, fullTableName, colName))
-				newSchema.Indexes = append(schema.Indexes, []string{f.Name})
+				newSchema.PIndexes = append(schema.PIndexes, []string{f.PName})
 			}
 
-			if !newSchema.AddField(f) {
-				return "", nil, fmt.Errorf("field '%s': already exists and cannot be added", f.Name)
+			if newSchema.AddField(f).err != nil {
+				return "", nil, newSchema.err
 			}
-		case AlterColumn:
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s", fullTableName, f.Name, string(f.Type)))
-			if f.Type == FieldVarchar && f.Max != nil {
+		case ALTER_COLUMN:
+			sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s", fullTableName, f.PName, string(f.PType)))
+			if f.PType == FIELD_VARCHAR && f.PMax != nil {
 				sb.Reset()
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%d)", fullTableName, f.Name, f.Type, *f.Max))
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%d)", fullTableName, f.PName, f.PType, *f.PMax))
 			}
 			sb.WriteString(";\n")
 
 			// Nullable
-			if f.Nullable {
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", fullTableName, f.Name))
+			if f.PNullable {
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", fullTableName, f.PName))
 			} else {
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", fullTableName, f.Name))
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", fullTableName, f.PName))
 			}
 
 			// Default
-			if f.Default != nil {
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", fullTableName, f.Name, *f.Default))
+			if f.PDefault != nil {
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", fullTableName, f.PName, *f.PDefault))
 			} else {
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", fullTableName, f.Name))
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", fullTableName, f.PName))
 			}
 
 			// Rename columna
-			if opts != nil && opts.NewName != nil && *opts.NewName != f.Name {
-				sb.WriteString(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s;\n", fullTableName, f.Name, *opts.NewName))
+			if opts != nil && opts.NewName != nil && *opts.NewName != f.PName {
+				sb.WriteString(fmt.Sprintf("ALTER TABLE %s RENAME COLUMN %s TO %s;\n", fullTableName, f.PName, *opts.NewName))
 			}
 
-			oldCol := f.Name
-			newCol := f.Name
+			oldCol := f.PName
+			newCol := f.PName
 
 			if opts != nil && opts.NewName != nil {
 				newCol = *opts.NewName
@@ -110,7 +105,7 @@ func (dbb *DBBridge) generateAlterSchemaSQL(schemaName string, fields []*AlterFi
 			// Unique
 			if opts != nil && opts.OldUnique != nil {
 				oldUnique := *opts.OldUnique
-				newUnique := f.Unique
+				newUnique := f.PUnique
 
 				oldIndexName := genIndexName(schemaName, oldCol)
 				newIndexName := genIndexName(schemaName, newCol)
@@ -135,19 +130,19 @@ func (dbb *DBBridge) generateAlterSchemaSQL(schemaName string, fields []*AlterFi
 					sb.WriteString(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;\n", oldIndexName, newIndexName))
 				}
 
-				newSchema.Indexes = append(schema.Indexes, []string{newCol})
+				newSchema.PIndexes = append(schema.PIndexes, []string{newCol})
 			}
 
-			f.Name = newCol
-			if !newSchema.UpdateField(oldCol, f) {
-				return "", nil, fmt.Errorf("field '%s': cannot be updated", f.Name)
+			f.PName = newCol
+			if newSchema.UpdateField(oldCol, f).err != nil {
+				return "", nil, newSchema.err
 			}
-		case DropColumn:
-			if !newSchema.RemoveField(f.Name) {
-				return "", nil, fmt.Errorf("field '%s': cannot be removed", f.Name)
+		case DROP_COLUMN:
+			if newSchema.RemoveField(f.PName).err != nil {
+				return "", nil, newSchema.err
 			}
 
-			sb.WriteString(fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", fullTableName, f.Name))
+			sb.WriteString(fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", fullTableName, f.PName))
 		}
 
 		sql.WriteString(sb.String())

@@ -10,56 +10,56 @@ func Ptr[T any](v T) *T {
 }
 
 func (d *DBBridge) generateCreateSchemaSQL(t *Schema) string {
-	fullTableName := "\"" + d.schemaPrefix + t.Name + "\""
+	fullTableName := "\"" + d.schemaPrefix + t.PName + "\""
 	var sb strings.Builder
 
 	// 1. Extensions
-	for _, ext := range t.Extensions {
+	for _, ext := range t.PExtensions {
 		sb.WriteString(ext)
 		sb.WriteString(";\n")
 	}
 
 	// 2. Table Comments
-	if t.Comment != "" {
-		sb.WriteString(fmt.Sprintf("-- %s\n", t.Comment))
+	if t.PComment != "" {
+		sb.WriteString(fmt.Sprintf("-- %s\n", t.PComment))
 	}
 
 	// 3. CREATE TABLE
 	sb.WriteString(fmt.Sprintf("CREATE TABLE %s (\n", fullTableName))
-	for i, f := range t.Fields {
-		line := fmt.Sprintf("    %s %s", f.Name, string(f.Type))
+	for i, f := range t.PFields {
+		line := fmt.Sprintf("    %s %s", f.PName, string(f.PType))
 
-		if f.Type == FieldVarchar && f.Max != nil {
-			line = fmt.Sprintf("    %s %s(%d)", f.Name, f.Type, *f.Max)
+		if f.PType == FIELD_VARCHAR && f.PMax != nil {
+			line = fmt.Sprintf("    %s %s(%d)", f.PName, f.PType, *f.PMax)
 		}
 
-		if f.PrimaryKey {
+		if f.PPrimaryKey {
 			line += " PRIMARY KEY"
 		}
-		if f.Unique {
+		if f.PUnique {
 			line += " UNIQUE"
 		}
-		if !f.Nullable {
+		if !f.PNullable {
 			line += " NOT NULL"
 		}
-		if f.Default != nil {
-			line += fmt.Sprintf(" DEFAULT %s", *f.Default)
+		if f.PDefault != nil {
+			line += fmt.Sprintf(" DEFAULT %s", *f.PDefault)
 		}
-		if f.ForeignKey != nil {
-			line += fmt.Sprintf(" REFERENCES \"%s\"(%s)", d.schemaPrefix+f.ForeignKey.Schema, f.ForeignKey.Column)
-			if f.ForeignKey.OnDelete != "" {
-				line += " ON DELETE " + string(f.ForeignKey.OnDelete)
+		if f.PForeignKey != nil {
+			line += fmt.Sprintf(" REFERENCES \"%s\"(%s)", d.schemaPrefix+f.PForeignKey.Schema_, f.PForeignKey.Column_)
+			if f.PForeignKey.OnDelete_ != "" {
+				line += " ON DELETE " + string(f.PForeignKey.OnDelete_)
 			}
-			if f.ForeignKey.OnUpdate != "" {
-				line += " ON UPDATE " + string(f.ForeignKey.OnUpdate)
+			if f.PForeignKey.OnUpdate_ != "" {
+				line += " ON UPDATE " + string(f.PForeignKey.OnUpdate_)
 			}
 		}
 
-		if len(f.EnumValues) > 0 {
-			quoted := "'" + strings.Join(f.EnumValues, "', '") + "'"
-			line += fmt.Sprintf(" CHECK (%s IN (%s))", f.Name, quoted)
+		if len(f.PEnumValues) > 0 {
+			quoted := "'" + strings.Join(f.PEnumValues, "', '") + "'"
+			line += fmt.Sprintf(" CHECK (%s IN (%s))", f.PName, quoted)
 		}
-		if i < len(t.Fields)-1 {
+		if i < len(t.PFields)-1 {
 			line += ","
 		}
 		line += "\n"
@@ -68,37 +68,37 @@ func (d *DBBridge) generateCreateSchemaSQL(t *Schema) string {
 	sb.WriteString(");\n\n")
 
 	// 4. column comment
-	for _, f := range t.Fields {
-		if f.Comment != "" {
-			sb.WriteString(fmt.Sprintf("COMMENT ON COLUMN %s.%s IS '%s';\n", fullTableName, f.Name, f.Comment))
+	for _, f := range t.PFields {
+		if f.PComment != "" {
+			sb.WriteString(fmt.Sprintf("COMMENT ON COLUMN %s.%s IS '%s';\n", fullTableName, f.PName, f.PComment))
 		}
 	}
 
 	// 5. table comment
-	if t.Comment != "" {
-		sb.WriteString(fmt.Sprintf("COMMENT ON TABLE %s IS '%s';\n", fullTableName, t.Comment))
+	if t.PComment != "" {
+		sb.WriteString(fmt.Sprintf("COMMENT ON TABLE %s IS '%s';\n", fullTableName, t.PComment))
 	}
 
 	// 6. index
-	for _, idx := range t.Indexes {
-		indexName := fmt.Sprintf("idx_%s_%s", t.Name, strings.Join(idx, "_"))
+	for _, idx := range t.PIndexes {
+		indexName := fmt.Sprintf("idx_%s_%s", t.PName, strings.Join(idx, "_"))
 		sb.WriteString(fmt.Sprintf("CREATE INDEX %s ON %s (%s);\n", indexName, fullTableName, strings.Join(idx, ", ")))
 	}
 
 	// 7. unique index
-	for _, uidx := range t.UniqueIndexes {
-		indexName := fmt.Sprintf("uniq_%s_%s", t.Name, strings.Join(uidx, "_"))
+	for _, uidx := range t.PUniqueIndexes {
+		indexName := fmt.Sprintf("uniq_%s_%s", t.PName, strings.Join(uidx, "_"))
 		sb.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);\n", indexName, fullTableName, strings.Join(uidx, ", ")))
 	}
 
 	// 8. primary compose key
-	if len(t.CompositePrimaryKey) > 0 {
-		sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD PRIMARY KEY (%s);\n", fullTableName, strings.Join(t.CompositePrimaryKey, ", ")))
+	if len(t.PCompositePrimaryKey) > 0 {
+		sb.WriteString(fmt.Sprintf("ALTER TABLE %s ADD PRIMARY KEY (%s);\n", fullTableName, strings.Join(t.PCompositePrimaryKey, ", ")))
 	}
 
 	// 9. unique compose keys
-	for _, uc := range t.CompositeUniqueKeys {
-		indexName := fmt.Sprintf("uniq_%s_%s", t.Name, strings.Join(uc, "_"))
+	for _, uc := range t.PCompositeUniqueKeys {
+		indexName := fmt.Sprintf("uniq_%s_%s", t.PName, strings.Join(uc, "_"))
 		sb.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);\n", indexName, fullTableName, strings.Join(uc, ", ")))
 	}
 

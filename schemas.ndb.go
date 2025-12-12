@@ -6,93 +6,90 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/nitsugaro/go-ndb/cache"
 )
 
 func InEnum(val string, enum []string) bool {
-	for _, v := range enum {
-		if v == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(enum, val)
 }
 
-func validateString(val string, f *Field) error {
-	if f.Type != FieldText && f.Type != FieldVarchar && f.Type != FieldTimestamp && f.Type != FieldJSONB && f.Type != FieldUUID {
-		return fmt.Errorf("field '%s': must be %s type", f.Name, f.Type)
+func validateString(val string, f *SchemaField) error {
+	if f.PType != FIELD_TEXT && f.PType != FIELD_VARCHAR && f.PType != FIELD_TIMESTAMP && f.PType != FIELD_JSONB && f.PType != FIELD_UUID {
+		return fmt.Errorf("field '%s': must be %s type", f.PName, f.PType)
 	}
 
-	if f.Max != nil && len(val) > *f.Max {
-		return fmt.Errorf("field '%s': string max length is '%v'", f.Name, *f.Max)
+	if f.PMax != nil && len(val) > *f.PMax {
+		return fmt.Errorf("field '%s': string max length is '%v'", f.PName, *f.PMax)
 	}
 
-	if f.Min != nil && len(val) < *f.Min {
-		return fmt.Errorf("field '%s': string min length is '%v'", f.Name, *f.Min)
+	if f.PMin != nil && len(val) < *f.PMin {
+		return fmt.Errorf("field '%s': string min length is '%v'", f.PName, *f.PMin)
 	}
 
-	if f.Pattern != nil {
-		regex, err := cache.GetRegexp(*f.Pattern)
+	if f.PPattern != nil {
+		regex, err := cache.GetRegexp(*f.PPattern)
 		if err != nil {
-			return fmt.Errorf("field '%s': cannot apply regex '%s'", f.Name, *f.Pattern)
+			return fmt.Errorf("field '%s': cannot apply regex '%s'", f.PName, *f.PPattern)
 		}
 
 		if !regex.MatchString(val) {
-			return fmt.Errorf("field '%s': invalid regex value %s", f.Name, *f.Pattern)
+			return fmt.Errorf("field '%s': invalid regex value %s", f.PName, *f.PPattern)
 		}
 	}
 
-	if f.EnumValues != nil && !InEnum(val, f.EnumValues) {
-		return fmt.Errorf("field '%s': must be one of these values [%s]", f.Name, strings.Join(f.EnumValues, ", "))
+	if f.PEnumValues != nil && !InEnum(val, f.PEnumValues) {
+		return fmt.Errorf("field '%s': must be one of these values [%s]", f.PName, strings.Join(f.PEnumValues, ", "))
 	}
 
-	if f.Type == FieldTimestamp {
+	if f.PType == FIELD_TIMESTAMP {
 		_, err := time.Parse(val, "2006-01-02T15:04:39.013Z")
 		if err != nil {
-			return fmt.Errorf("field '%s': invalid timestamp %s", f.Name, err.Error())
+			return fmt.Errorf("field '%s': invalid timestamp %s", f.PName, err.Error())
 		}
 	}
 
 	return nil
 }
 
-func validateInt(val int64, f *Field) error {
-	if f.Type != FieldBigInt && f.Type != FieldBigSerial && f.Type != FieldSmallInt && f.Type != FieldSmallSerial && f.Type != FieldInt {
-		return fmt.Errorf("field '%s': must be %s type", f.Name, f.Type)
+func validateInt(val int64, f *SchemaField) error {
+	if f.PType != FIELD_BIG_INT && f.PType != FIELD_BIG_SERIAL && f.PType != FIELD_SMALL_INT && f.PType != FIELD_SMALL_SERIAL && f.PType != FIELD_INT {
+		return fmt.Errorf("field '%s': must be %s type", f.PName, f.PType)
 	}
 
-	if f.Max != nil && int(val) > *f.Max {
-		return fmt.Errorf("field '%s': max is '%v'", f.Name, *f.Max)
+	if f.PMax != nil && int(val) > *f.PMax {
+		return fmt.Errorf("field '%s': max is '%v'", f.PName, *f.PMax)
 	}
 
-	if f.Min != nil && int(val) < *f.Min {
-		return fmt.Errorf("field '%s': min is '%v'", f.Name, *f.Min)
+	if f.PMin != nil && int(val) < *f.PMin {
+		return fmt.Errorf("field '%s': min is '%v'", f.PName, *f.PMin)
 	}
 
-	if f.EnumValues != nil && !InEnum(strconv.Itoa(int(val)), f.EnumValues) {
-		return fmt.Errorf("field '%s': must be one of these values [%s]", f.Name, strings.Join(f.EnumValues, ", "))
-	}
-
-	return nil
-}
-
-func validateFloat(val float64, f *Field) error {
-	if f.Type != FieldDouble && f.Type != FieldFloat {
-		return fmt.Errorf("field '%s': must be %s type", f.Name, f.Type)
-	}
-
-	if f.Max != nil && val > float64(*f.Max) {
-		return fmt.Errorf("field '%s': max is '%v'", f.Name, *f.Max)
-	}
-
-	if f.Min != nil && val < float64(*f.Min) {
-		return fmt.Errorf("field '%s': min is '%v'", f.Name, *f.Min)
+	if f.PEnumValues != nil && !InEnum(strconv.Itoa(int(val)), f.PEnumValues) {
+		return fmt.Errorf("field '%s': must be one of these values [%s]", f.PName, strings.Join(f.PEnumValues, ", "))
 	}
 
 	return nil
 }
 
-func (dbb *DBBridge) ValidateSchema(name string, data M) error {
+func validateFloat(val float64, f *SchemaField) error {
+	if f.PType != FIELD_DOUBLE && f.PType != FIELD_FLOAT {
+		return fmt.Errorf("field '%s': must be %s type", f.PName, f.PType)
+	}
+
+	if f.PMax != nil && val > float64(*f.PMax) {
+		return fmt.Errorf("field '%s': max is '%v'", f.PName, *f.PMax)
+	}
+
+	if f.PMin != nil && val < float64(*f.PMin) {
+		return fmt.Errorf("field '%s': min is '%v'", f.PName, *f.PMin)
+	}
+
+	return nil
+}
+
+func (dbb *DBBridge) ValidateSchema(name string, queryType QueryType, data M) error {
 	if dbb.schemaStorage == nil {
 		return nil
 	}
@@ -102,31 +99,33 @@ func (dbb *DBBridge) ValidateSchema(name string, data M) error {
 		return ErrSchemaKeyNotFound
 	}
 
-	for _, f := range schema.Fields {
-		val := data[f.Name]
-		if val == nil && !f.Nullable && f.Default == nil && f.Type != FieldBigSerial && f.Type != FieldSmallSerial {
-			return fmt.Errorf("field '%s': is required", f.Name)
+	for _, f := range schema.PFields {
+		val, ok := data[f.PName]
+		if ((ok && queryType == UPDATE) || queryType == CREATE) && val == nil && !f.PNullable && f.PDefault == nil && f.PType != FIELD_BIG_SERIAL && f.PType != FIELD_SMALL_SERIAL {
+			return fmt.Errorf("field '%s': is required", f.PName)
 		}
 
 		var err error
 		if val != nil {
 			switch val := val.(type) {
 			case bool:
-				if f.Type != FieldBoolean {
-					return fmt.Errorf("field '%s': must be %s type", f.Name, f.Type)
+				if f.PType != FIELD_BOOLEAN {
+					return fmt.Errorf("field '%s': must be %s type", f.PName, f.PType)
 				}
 			case int64:
-				err = validateInt(val, &f)
+				err = validateInt(val, f)
 			case int:
-				err = validateInt(int64(val), &f)
+				err = validateInt(int64(val), f)
+			case uint:
+				err = validateInt(int64(val), f)
 			case float64:
-				err = validateFloat(val, &f)
+				err = validateFloat(val, f)
 			case float32:
-				err = validateFloat(float64(val), &f)
+				err = validateFloat(float64(val), f)
 			case string:
-				err = validateString(val, &f)
+				err = validateString(val, f)
 			default:
-				return fmt.Errorf("field '%s': unsopported type only accept: [bool, int, int64, float32, float64, string]", f.Name)
+				return fmt.Errorf("field '%s': unsopported type only accept: [bool, int, uint, int64, float32, float64, string]", f.PName)
 			}
 		}
 
@@ -140,6 +139,6 @@ func (dbb *DBBridge) ValidateSchema(name string, data M) error {
 
 func (d *DBBridge) GetTables() ([]M, error) {
 	return d.ExecuteQuery(
-		"SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE '" + d.schemaPrefix + "%'",
+		"SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE '" + d.schemaPrefix + "%';",
 	)
 }

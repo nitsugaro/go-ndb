@@ -7,11 +7,18 @@ import (
 	"github.com/nitsugaro/go-nstore"
 )
 
+type DBFuncs interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	Exec(query string, args ...any) (sql.Result, error)
+	Begin() (*sql.Tx, error)
+}
+
 type M = map[string]any
 
 type DBBridge struct {
-	db            *sql.DB
 	schemaPrefix  string
+	db            *sql.DB
+	trx           *sql.Tx
 	middlewares   []Middleware
 	schemaStorage *nstore.NStorage[*Schema]
 }
@@ -26,7 +33,7 @@ func (dbb *DBBridge) GetSchemas(query ...nstore.ConditionalFunc[*Schema]) []*Sch
 }
 
 func (dbb *DBBridge) GetSchema(name string) (*Schema, bool) {
-	result, total := dbb.schemaStorage.Query(func(t *Schema) bool { return t.Name == name }, 1)
+	result, total := dbb.schemaStorage.Query(func(t *Schema) bool { return t.PName == name }, 1)
 	if total == 1 {
 		return result[0], true
 	}
@@ -47,8 +54,6 @@ func (dbb *DBBridge) CreateSchema(schema *Schema) error {
 
 func (dbb *DBBridge) ModifySchema(schemaName string, fields []*AlterField) error {
 	sql, newSchema, err := dbb.generateAlterSchemaSQL(schemaName, fields)
-
-	fmt.Println(sql)
 
 	if err != nil {
 		return err
@@ -83,14 +88,21 @@ type NBridge struct {
 	DB            *sql.DB
 	SchemaPrefix  string
 	SchemaStorage *nstore.NStorage[*Schema]
+	trx           *sql.Tx
+	middlewares   []Middleware
 }
 
 func NewBridge(nbrigde *NBridge) *DBBridge {
 	brigde := &DBBridge{
 		db:            nbrigde.DB,
+		trx:           nbrigde.trx,
 		schemaPrefix:  nbrigde.SchemaPrefix,
 		schemaStorage: nbrigde.SchemaStorage,
-		middlewares:   []Middleware{},
+		middlewares:   nbrigde.middlewares,
+	}
+
+	if brigde.middlewares == nil {
+		brigde.middlewares = []Middleware{}
 	}
 
 	return brigde

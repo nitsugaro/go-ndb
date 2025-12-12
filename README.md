@@ -1,323 +1,380 @@
-# go-ndb Usage Example
+# go-ndb
 
-This project showcases how to leverage [`go-ndb`](https://github.com/nitsugaro/go-ndb) for dynamic and programmatic interaction with PostgreSQL schemas, using a powerful abstraction layer. With support for schema definitions, versioning, runtime modifications, filters, joins, and even middleware, it is ideal for building modular and scalable data-driven applications.
+Minimal query builder + schema manager for PostgreSQL, focused on:
 
-It also integrates with:
-- [`go-conf`](https://github.com/nitsugaro/go-conf): for configuration loading.
-- [`go-nstore`](https://github.com/nitsugaro/go-nstore): for persistent schema storage and versioning.
+- **Practical CRUD**
+- **Safe payload binding**
+- **Composable queries** (joins, grouping, order, subqueries)
+- **Transactions + middlewares**
+- **Dynamic query + schema construction**, designed for platforms where the backend must execute **runtime-defined** SQL.
 
----
+The goal is to allow not only writing SQL in Go, but also **building SQL dynamically** from:
 
-## ✨ Features Demonstrated
+- workflow/journey builders
+- admin panels
+- SaaS where customers define tables/fields
+- engines that generate SQL from JSON or interpreted rules
 
-- ✅ Define and version table schemas via Go structs
-- ✅ Automatically create or drop schemas from code
-- ✅ Add or rename columns at runtime
-- ✅ Advanced filtering with `AND`, `OR`, `IN`, `LIKE`, etc.
-- ✅ Join multiple schemas and filter results
-- ✅ Enforce foreign key constraints and cascading deletes
-- ✅ Use middlewares to intercept and modify queries
-- ✅ Save/load schema definitions from disk
-- ✅ Full support for field types, enums, indexes and composite keys
+This library ensures **safety, predictability and strict API structure**.
 
 ---
 
-## 📁 Schema Definitions
+## 📦 Installation
 
-We define two schemas: `users` and `users_type`. These schemas include fields, indexes, default values, foreign keys, enums, and more.
-
-### Users Table
-
-```go
-var usersTable = &ndb.Schema{
-	Name:    "users",
-	Comment: "Main users table",
-	Fields: []ndb.Field{
-		{Name: "id", Type: ndb.FieldBigSerial, PrimaryKey: true},
-		{Name: "public_id", Type: ndb.FieldUUID, Nullable: false, Unique: true},
-		{Name: "email", Type: ndb.FieldVarchar, Max: ndb.Ptr(254), Nullable: false, Unique: true},
-		{Name: "email_verified", Type: ndb.FieldBoolean, Default: ndb.Ptr("false"), Nullable: false},
-		{Name: "phone", Type: ndb.FieldVarchar, Max: ndb.Ptr(20), Unique: true, Nullable: true},
-		{Name: "phone_verified", Type: ndb.FieldBoolean, Default: ndb.Ptr("false"), Nullable: false},
-		{Name: "password_hash", Type: ndb.FieldVarchar, Max: ndb.Ptr(100)},
-		{Name: "given_name", Type: ndb.FieldVarchar, Max: ndb.Ptr(100)},
-		{Name: "family_name", Type: ndb.FieldVarchar, Max: ndb.Ptr(100)},
-		{Name: "full_name", Type: ndb.FieldVarchar, Max: ndb.Ptr(200)},
-		{Name: "username", Type: ndb.FieldVarchar, Max: ndb.Ptr(100), Unique: true, EnumValues: []string{"agus", "nitsugaro", "rome"}},
-		{Name: "provider", Type: ndb.FieldVarchar, Max: ndb.Ptr(50)},
-		{Name: "provider_subject", Type: ndb.FieldVarchar, Max: ndb.Ptr(255)},
-		{Name: "status", Type: ndb.FieldVarchar, Max: ndb.Ptr(20), Default: ndb.Ptr("'active'"), Nullable: false},
-		{Name: "last_login_at", Type: ndb.FieldTimestamp},
-		{Name: "created_at", Type: ndb.FieldTimestamp, Default: ndb.Ptr("now()"), Nullable: false},
-		{Name: "updated_at", Type: ndb.FieldTimestamp, Default: ndb.Ptr("now()"), Nullable: false},
-	},
-	UniqueIndexes: [][]string{{"public_id"}},
-	Indexes: [][]string{
-		{"email"},
-		{"username"},
-		{"provider", "provider_subject"},
-	},
-}
-```
-
-### Users Type Table
-
-```go
-var userType = &ndb.Schema{
-	Name: "users_type",
-	Fields: []ndb.Field{
-		{
-			Name: "user_id", Type: ndb.FieldBigInt, ForeignKey: &ndb.ForeignKey{
-				Schema: "users", Column: "id", OnDelete: ndb.Cascade,
-			},
-		},
-		{Name: "type", Type: ndb.FieldText, Max: ndb.Ptr(100), Default: ndb.Ptr("'client'")},
-	},
-}
+```bash
+go get github.com/nitsugaro/go-ndb@v1.1.0
 ```
 
 ---
 
-## 🧪 Bootstrapping the Bridge
+## 🧩 Core Concepts
+
+### Schema
+
+A `Schema` holds table definition + fields + indexes + FK rules.
+
+### Field types supported
+
+```
+SMALLINT, SMALLSERIAL, INT, BIGINT, SERIAL, BIGSERIAL
+VARCHAR, TEXT
+UUID
+BOOLEAN
+TIMESTAMP
+JSONB
+FLOAT, DOUBLE PRECISION
+```
+
+### FK rules
+
+```
+NO ACTION, RESTRICT, CASCADE, SET NULL, SET DEFAULT
+```
+
+---
+
+## ⚙️ Quick Start
 
 ```go
-db, _ := sql.Open("postgres", "postgres://postgres:password@localhost:5432/test?sslmode=disable")
-goconf.LoadConfig()
+import (
+  "database/sql"
+  "github.com/nitsugaro/go-ndb"
+  "github.com/nitsugaro/go-nstore"
+)
 
-storage, _ := nstore.New[*ndb.Schema](goconf.GetOpField("ndb.schema.folder", "schemas"))
-storage.LoadFromDisk()
+db, _ := sql.Open("postgres", "<dsn>")
 
+store := nstore.NewNStorage[*ndb.Schema]()
 bridge := ndb.NewBridge(&ndb.NBridge{
-	DB:            db,
-	SchemaPrefix:  "prefix_",
-	SchemaStorage: storage,
+  DB:            db,
+  SchemaPrefix:  "",
+  SchemaStorage: store,
 })
 ```
 
 ---
 
-## ⚙️ Create or Delete Schemas
+# 🧱 Defining Schemas
+
+Example matching the real test code:
 
 ```go
-// Create schema if missing
-if _, exists := bridge.GetSchema("users"); !exists {
-	_ = bridge.CreateSchema(usersTable)
-}
+var usersTable = ndb.NewSchema("users").
+  Comment("User Table").
+  Extension(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`).
+  UniqueIndex("public_id").
+  Indexes("email", "username").
 
-// Delete a schema
-_ = bridge.DeleteSchema("old_schema")
+  NewField("id").Type(ndb.FIELD_BIG_SERIAL).PK().DoneField().
+  NewField("public_id").Type(ndb.FIELD_UUID).Unique().DoneField().
+  NewField("email").Type(ndb.FIELD_VARCHAR).Max(254).Unique().DoneField().
+  NewField("username").Type(ndb.FIELD_VARCHAR).Max(100).Unique().Nullable().DoneField().
+  NewField("status").Type(ndb.FIELD_VARCHAR).Max(20).Default("'active'").DoneField().
+  NewField("created_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").DoneField().
+  NewField("updated_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").DoneField()
+```
+
+Creating / deleting schemas:
+
+```go
+_ = bridge.DeleteSchema(usersTable.PName)
+_ = bridge.CreateSchema(usersTable)
 ```
 
 ---
 
-## 🧱 Modify Schema
+# 🧠 Query Builder
 
-You can add, rename, or alter fields at runtime.
+## CREATE
 
 ```go
-_ = bridge.ModifySchema("users", []*ndb.AlterField{
-	{
-		Field:       &ndb.Field{Name: "nickname", Type: ndb.FieldVarchar, Max: ndb.Ptr(50)},
-		AlterAction: ndb.AddColumn,
-	},
-	{
-		Field: &ndb.Field{Name: "full_name", Type: ndb.FieldVarchar, Max: ndb.Ptr(100)},
-		AlterAction: ndb.AlterColumn,
-		AlterOptions: &ndb.AlterOptions{
-			NewName: ndb.Ptr("display_name"),
-		},
-	},
+q := ndb.NewCreateQuery("users").
+  Payload(ndb.M{"email":"a@test.com"}).
+  Fields("id", "email", "created_at")
+```
+
+## READ
+
+```go
+q := ndb.NewReadQuery("users").
+  Where(ndb.M{"status":"active"}).
+  Fields("id","email","username").
+  Order(ndb.Fs("users.created_at", "DESC")).
+  Limit(10)
+```
+
+## UPDATE
+
+```go
+q := ndb.NewUpdateQuery("users").
+  Payload(ndb.M{"email":"updated@test.com"}).
+  Where(ndb.M{"id":10}).
+  Fields("id","email")
+```
+
+## DELETE
+
+```go
+q := ndb.NewDeleteQuery("users").
+  Where(ndb.M{"id":10})
+```
+
+---
+
+# 💾 CRUD EXAMPLES
+
+### Insert One (CreateOneB)
+
+```go
+type User struct {
+  ID uint `json:"id"`
+  Email string `json:"email"`
+}
+
+payload := ndb.M{
+  "public_id": uuid.NewString(),
+  "email":     "user@test.com",
+  "username":  "user",
+}
+
+q := ndb.NewCreateQuery(usersTable.PName).
+  Payload(payload).
+  Fields("id","public_id","email","username","created_at")
+
+var u User
+if err := bridge.CreateOneB(q, &u); err != nil {
+  panic(err)
+}
+```
+
+---
+
+### Read
+
+```go
+var users []User
+
+q := ndb.NewReadQuery(usersTable.PName).
+  Where(ndb.M{"status":"active"}).
+  Order(ndb.Fs("users.id","ASC")).
+  Fields("id","email","username")
+
+if err := bridge.ReadB(q, &users); err != nil {
+  panic(err)
+}
+```
+
+---
+
+### Update (UpdateOneWithFieldsB)
+
+```go
+q := ndb.NewUpdateQuery(usersTable.PName).
+  Payload(ndb.M{"email":"user+updated@test.com"}).
+  Where(ndb.M{"id": u.ID}).
+  Fields("id","email","username")
+
+var updated User
+if err := bridge.UpdateOneWithFieldsB(q, &updated); err != nil {
+  panic(err)
+}
+```
+
+---
+
+### Delete → DeleteWithRowsAffected
+
+```go
+q := ndb.NewDeleteQuery(usersTable.PName).
+  Where(ndb.M{"id": u.ID})
+
+rows, err := bridge.DeleteWithRowsAffected(q)
+if err != nil { panic(err) }
+fmt.Println(rows)
+```
+
+---
+
+# 🔗 Joins & Aggregations
+
+```go
+readJoin := ndb.NewReadQuery(userType.PName).
+  NewField("users_type.user_id").Distinct().Count().As("row_count").DoneField().
+  NewField("user_payments.amount").Sum().As("total_amount").DoneField().
+  NewField("users.username").DoneField().
+
+  NewJoin(usersTable.PName, ndb.INNER_JOIN).
+    On(ndb.M{"users_type.user_id": ndb.M{"eq_field": "users.id"}}).
+    DoneJoin().
+
+  NewJoin(userPayments.PName, ndb.LEFT_JOIN).
+    On(ndb.M{"user_payments.user_id": ndb.M{"eq_field": "users.id"}}).
+    DoneJoin().
+
+  Group(ndb.Fs("users.username"))
+```
+
+---
+
+# 🌀 Subqueries (UPDATED)
+
+### Create + SubQuery
+
+```go
+sub := ndb.NewReadQuery(usersTable.PName).
+  Fields("users.id").
+  Where(ndb.M{"id": userB.ID}).
+  Limit(1)
+
+q := ndb.NewCreateQuery(userType.PName).
+  SubQuery(sub, ndb.Fs("user_id")).
+  Fields("user_id","type")
+
+_, err := bridge.Create(q)
+```
+
+---
+
+### Read + Named SubQuery
+
+```go
+sub := ndb.NewReadQuery(userPayments.PName).
+  NewField("user_payments.user_id").As("user_id").DoneField().
+  NewField("user_payments.amount").Sum().As("total_amount").DoneField().
+  Where(ndb.M{"user_id": userB.ID}).
+  Group(ndb.Fs("user_payments.user_id")).
+  Limit(1)
+
+outer := ndb.NewReadQuery(usersTable.PName).
+  SubQueryName("sq", sub, ndb.Fs("user_id","total_amount")).
+  NewField("sq.user_id").As("user_id").DoneField().
+  NewField("sq.total_amount").As("total_amount").DoneField().
+  NewField("users.username").DoneField().
+  NewJoin(usersTable.PName, ndb.INNER_JOIN).
+    On(ndb.M{"users.id": ndb.M{"eq_field": "sq.user_id"}}).
+    DoneJoin().
+  Where(ndb.M{"users.id": userB.ID}).
+  Limit(1)
+```
+
+---
+
+# 🔄 Update / Delete with Subqueries
+
+### UPDATE + SubQuery
+
+```go
+sub := ndb.NewReadQuery(usersTable.PName).
+  Fields("users.status").
+  Where(ndb.M{"id": userA.ID}).
+  Limit(1)
+
+q := ndb.NewUpdateQuery(usersTable.PName).
+  SubQuery(sub, ndb.Fs("status")).
+  Where(ndb.M{"id": userB.ID}).
+  Fields("id","email","username","status")
+
+var updated ...
+err := bridge.UpdateOneWithFieldsB(q, &updated)
+```
+
+---
+
+### DELETE + SubQueryName
+
+```go
+sub := ndb.NewReadQuery(usersTable.PName).
+  Fields("users.id").
+  Where(ndb.M{"id": userB.ID}).
+  Limit(1)
+
+q := ndb.NewDeleteQuery(userPayments.PName).
+  SubQueryName("sub", sub, ndb.Fs("id")).
+  Where(ndb.M{
+    "user_payments.user_id": ndb.M{"eq_field": "sub.id"},
+  })
+
+rows, _ := bridge.DeleteWithRowsAffected(q)
+```
+
+---
+
+# 🧮 Field Operations (Aggregates, Min/Max/Count)
+
+```go
+read := ndb.NewReadQuery(usersTable.PName).
+  NewField("users.id").Count().As("row_count").DoneField().
+  NewField("users.email").Min().As("min_email").DoneField().
+  NewField("users.email").Max().As("max_email").DoneField()
+```
+
+---
+
+# 💥 Transactions
+
+```go
+err := bridge.Transaction(func(tx *ndb.DBBridge) error {
+  q := ndb.NewCreateQuery("trx_users").
+    Payload(ndb.M{"email":"commit@test.com"}).
+    Fields("id","email","created_at")
+
+  var row TrxUser
+  if err := tx.CreateOneB(q, &row); err != nil {
+    return err
+  }
+  return nil
 })
 ```
 
 ---
 
-## 👀 Read Queries with Filters
-
-### Basic `WHERE` clause
+# 🧰 Middlewares
 
 ```go
-read := ndb.NewReadQuery("users")
-read.Where = []ndb.M{{"email_verified": true}}
-res, _ := bridge.Read(read)
-```
-
-### Combined `AND` conditions
-
-```go
-read := ndb.NewReadQuery("users")
-read.Where = []ndb.M{{
-	"email_verified": true,
-	"status":         "active",
-}}
-```
-
-### `OR` conditions
-
-```go
-read := ndb.NewReadQuery("users")
-read.Where = []ndb.M{
-	{"status": "disabled"},
-	{"username": "agus"},
-}
-```
-
-### `IN` clause
-
-```go
-read := ndb.NewReadQuery("users")
-read.Where = []ndb.M{{
-	"username": ndb.M{"in": []string{"agus", "nitsugaro", "rome"}},
-}}
-```
-
-### `LIKE` matching
-
-```go
-read := ndb.NewReadQuery("users")
-read.Where = []ndb.M{
-	{"email": ndb.M{"like": "%@gmail.com"}},
-}
-```
-
----
-
-## 🔀 Ordering and Pagination
-
-```go
-read := ndb.NewReadQuery("users")
-read.OrderBy = []string{"created_at", "DESC"}
-read.Limit = 10
-read.Offset = 20
-```
-
----
-
-## 🔁 Join Queries
-
-```go
-read := ndb.NewReadQuery("users_type")
-read.Joins = []*ndb.Join{
-	{
-		Type: ndb.InnerJoin,
-		BasicSchema: &ndb.BasicSchema{Schema: "users"},
-		On: []ndb.M{
-			{"user_id": ndb.M{"eq_field": "users.id"}},
-		},
-	},
-}
-joined, _ := bridge.Read(read)
-```
-
----
-
-## ➕ Insert Records
-
-```go
-create := ndb.NewCreateQuery("users")
-create.Data = ndb.M{
-	"email":      "someone@example.com",
-	"public_id":  "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-	"username":   "newuser",
-	"status":     "active",
-	"created_at": "now()",
-}
-user, _ := bridge.Create(create)
-```
-
----
-
-## ✏️ Update Records
-
-```go
-update := ndb.NewUpdateQuery("users")
-update.Data = ndb.M{"email_verified": true}
-update.Where = []ndb.M{{"username": "newuser"}}
-bridge.Update(update)
-```
-
----
-
-## ❌ Delete Records
-
-```go
-del := ndb.NewDeleteQuery("users")
-del.Where = []ndb.M{{"status": "disabled"}}
-bridge.Delete(del)
-```
-
----
-
-## 🧩 Using Middleware
-
-Middleware lets you inspect or modify queries:
-
-```go
-bridge.AddMiddleware(func(query any) error {
-	fmt.Printf("Intercepted query: %#v\n", query)
-	return nil
+bridge.AddMiddleware(func(q *ndb.Query) error {
+  if q.Type() == ndb.DELETE && len(q.Where) == 0 {
+    return fmt.Errorf("DELETE without WHERE is forbidden")
+  }
+  return nil
 })
 ```
 
 ---
 
-## 🧠 Listing Available Schemas
+# ❓ FAQ
+
+### What is `M`?
 
 ```go
-schemas := bridge.GetSchemas()
-for _, s := range schemas {
-	fmt.Println(s.Name)
-}
+type M = map[string]any
 ```
 
-Or filtered by name prefix:
+### Default limit
 
-```go
-schemas := bridge.GetSchemas(func(s *ndb.Schema) bool {
-	return strings.HasPrefix(s.Name, "user")
-})
-```
+If not set, `GetLimit()` returns `100`.
 
 ---
 
-## 🧬 Enum Support
+# 📜 License
 
-Enum values are defined directly on a field:
-
-```go
-{
-	Name:       "username",
-	Type:       ndb.FieldVarchar,
-	Max:        ndb.Ptr(100),
-	Nullable:   true,
-	Unique:     true,
-	EnumValues: []string{"agus", "nitsugaro", "rome"},
-}
-```
-
----
-
-## 🧨 Composite Indexes and Keys
-
-```go
-&ndb.Schema{
-	Name: "sessions",
-	CompositePrimaryKey: []string{"user_id", "device_id"},
-	CompositeUniqueKeys: [][]string{{"user_id", "token"}},
-}
-```
-
----
-
-## ⚠️ Foreign Key Cascades
-
-```go
-{
-	Name: "user_id", Type: ndb.FieldBigInt,
-	ForeignKey: &ndb.ForeignKey{
-		Schema:   "users",
-		Column:   "id",
-		OnDelete: ndb.Cascade,
-	},
-}
-```
+MIT

@@ -16,4 +16,5 @@ var (
 	ErrInvalidBoolType          = errors.New("invalid bool type")
 	ErrInvalidListType          = errors.New("invalid list type")
 	ErrSchemaKeyNotFound        = errors.New("not found key in schema")
+	ErrInvalidQueryType         = errors.New("invalid query type operation")
 )

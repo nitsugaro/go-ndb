@@ -2,59 +2,55 @@ package ndb
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	goutils "github.com/nitsugaro/go-utils"
 )
 
-var validName = regexp.MustCompile(`^([a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?|\*|(count|sum|avg|min|max|lower|upper)\((\*|[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?)\))$`)
-
-func ValidSqlField(f string) error {
-	if !validName.MatchString(f) {
-		return fmt.Errorf("invalid field syntax: %s", f)
-	}
-
-	if matches := validName.FindStringSubmatch(f); matches != nil {
-		funcName := matches[1]
-		if allowedFuncs[funcName] {
-			return nil
+func FormatSQLFields(schemaPrefix string, fields ...string) ([]string, error) {
+	parts := make([]string, len(fields))
+	for i := range fields {
+		val, err := FormatSQLField(schemaPrefix, fields[i])
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		return fmt.Errorf("invalid field syntax: %s", f)
+
+		parts[i] = val
 	}
-	return nil
+
+	return parts, nil
 }
 
-func ValidSqlFields(fields []string) error {
-	for _, field := range fields {
-		if err := ValidSqlField(field); err != nil {
-			return err
-		}
-	}
+func FormatSQLField(schemaPrefix string, f string) (string, error) {
+	parts := strings.Split(f, ":")
 
-	return nil
-}
-
-func ValidParseSqlField(schemaPrefix, f string) (string, error) {
-	parts := strings.Split(f, ".")
-	if len(parts) > 2 {
+	nameParts := strings.Split(parts[0], ".")
+	if len(nameParts) > 2 {
 		return "", fmt.Errorf("invalid field syntax: '%s'", f)
 	}
 
-	return strings.Join(goutils.Map(parts, func(f string, i int) string {
-		if i == 0 && len(parts) != 1 {
-			return "\"" + schemaPrefix + f + "\""
-		} else {
-			return "\"" + f + "\""
+	name := "*"
+	if parts[0] != "*" {
+		if err := IsSQLName(parts[0]); err != nil {
+			return "", err
 		}
-	}), "."), nil
+
+		name = strings.Join(goutils.Map(nameParts, func(f string, i int) string {
+			if i == 0 && len(nameParts) != 1 {
+				return "\"" + schemaPrefix + f + "\""
+			} else {
+				return "\"" + f + "\""
+			}
+		}), ".")
+	}
+
+	return name, nil
 }
 
-func ValidParseSqlFields(schemaPrefix string, f []string) ([]string, error) {
-	parts := make([]string, len(f))
-	for i := range f {
-		val, err := ValidParseSqlField(schemaPrefix, f[i])
+func ValidParseSqlFields(schemaPrefix string, fields []*SQLField) ([]string, error) {
+	parts := make([]string, len(fields))
+	for i := range fields {
+		val, err := fields[i].GerForQuery(schemaPrefix)
 		if err != nil {
 			return nil, err
 		}
