@@ -101,6 +101,16 @@ func (f *SchemaField) PK() *SchemaField {
 	return f
 }
 
+func (f *SchemaField) Pattern(pattern string) *SchemaField {
+	f.PPattern = &pattern
+	return f
+}
+
+func (f *SchemaField) Enum(values ...string) *SchemaField {
+	f.PEnumValues = values
+	return f
+}
+
 func (f *SchemaField) NewFK(schema string, column string) *ForeignKey {
 	f.PForeignKey = &ForeignKey{f: f, Schema_: schema, Column_: column}
 
