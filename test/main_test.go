@@ -2,11 +2,9 @@ package test
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"testing"
 
-	"github.com/fatih/color"
 	_ "github.com/lib/pq"
 	goconf "github.com/nitsugaro/go-conf"
 	"github.com/nitsugaro/go-ndb"
@@ -45,20 +43,7 @@ func TestMain(m *testing.M) {
 	storage.LoadFromDisk()
 
 	bridge = ndb.NewBridge(&ndb.NBridge{DB: db, SchemaPrefix: "ndb_", SchemaStorage: storage})
-	bridge.AddMiddleware(func(query *ndb.Query) error {
-		fmt.Print("\n\n")
-		switch query.Type() {
-		case ndb.READ:
-			color.Green(query.String())
-		case ndb.CREATE:
-			color.Yellow(query.String())
-		case ndb.UPDATE:
-			color.Magenta(query.String())
-		case ndb.DELETE:
-			color.Red(query.String())
-		}
-		return nil
-	})
+	bridge.AddMiddleware(ndb.QueryLoggingMiddleware, false)
 
 	m.Run()
 }
