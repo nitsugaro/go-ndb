@@ -94,7 +94,7 @@ func (dbb *DBBridge) ValidateSchema(name string, queryType QueryType, data M) er
 		return nil
 	}
 
-	schema, ok := dbb.GetSchema(name)
+	schema, ok := dbb.GetSchemaByName(name)
 	if !ok {
 		return ErrSchemaKeyNotFound
 	}

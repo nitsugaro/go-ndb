@@ -27,7 +27,7 @@ func (dbb *DBBridge) generateAlterSchemaSQL(schemaName string, fields []*AlterFi
 	fullTableName := fmt.Sprintf("\"%s%s\"", dbb.schemaPrefix, schemaName)
 	var sql strings.Builder
 
-	schema, ok := dbb.GetSchema(schemaName)
+	schema, ok := dbb.GetSchemaByName(schemaName)
 	if !ok {
 		return "", nil, ErrSchemaKeyNotFound
 	}

@@ -20,11 +20,11 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 		return "", nil, err
 	}
 
-	if err := dbb.runMiddlewares(readQuery); err != nil {
+	if err := dbb.runPrevValidateMiddlewares(readQuery); err != nil {
 		return "", nil, err
 	}
 
-	selectFields, err := readQuery.GetSelect(dbb.schemaPrefix)
+	fields, err := readQuery.GetFormattedFields(dbb.schemaPrefix)
 	if err != nil {
 		return "", nil, err
 	}
@@ -36,7 +36,7 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 	)
 
 	query.WriteString("SELECT ")
-	query.WriteString(strings.Join(selectFields, ","))
+	query.WriteString(strings.Join(fields, ","))
 	query.WriteString(" FROM ")
 
 	if readQuery.subQuery != nil {

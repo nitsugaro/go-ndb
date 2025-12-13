@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nitsugaro/go-nstore"
+	goutils "github.com/nitsugaro/go-utils"
 )
 
 type DBFuncs interface {
@@ -19,7 +20,8 @@ type DBBridge struct {
 	schemaPrefix  string
 	db            *sql.DB
 	trx           *sql.Tx
-	middlewares   []Middleware
+	prevValidate  []QueryMiddleware
+	postValidate  []QueryMiddleware
 	schemaStorage *nstore.NStorage[*Schema]
 }
 
@@ -29,10 +31,10 @@ func (dbb *DBBridge) GetSchemas(query ...nstore.ConditionalFunc[*Schema]) []*Sch
 	}
 
 	result, _ := dbb.schemaStorage.Query(query[0], len(dbb.schemaStorage.IDs()))
-	return result
+	return goutils.Filter(result, func(s *Schema, _ int) bool { return s != nil })
 }
 
-func (dbb *DBBridge) GetSchema(name string) (*Schema, bool) {
+func (dbb *DBBridge) GetSchemaByName(name string) (*Schema, bool) {
 	result, total := dbb.schemaStorage.Query(func(t *Schema) bool { return t.PName == name }, 1)
 	if total == 1 {
 		return result[0], true
@@ -67,7 +69,7 @@ func (dbb *DBBridge) ModifySchema(schemaName string, fields []*AlterField) error
 }
 
 func (dbb *DBBridge) DeleteSchema(name string) error {
-	schema, ok := dbb.GetSchema(name)
+	schema, ok := dbb.GetSchemaByName(name)
 	if !ok {
 		return fmt.Errorf("schema '%s' not found", name)
 	}
@@ -85,11 +87,12 @@ func (dbb *DBBridge) GetSchemaPrefix() string {
 }
 
 type NBridge struct {
-	DB            *sql.DB
-	SchemaPrefix  string
-	SchemaStorage *nstore.NStorage[*Schema]
-	trx           *sql.Tx
-	middlewares   []Middleware
+	DB                      *sql.DB
+	SchemaPrefix            string
+	SchemaStorage           *nstore.NStorage[*Schema]
+	trx                     *sql.Tx
+	prevValidatemiddlewares []QueryMiddleware
+	postValidatemiddlewares []QueryMiddleware
 }
 
 func NewBridge(nbrigde *NBridge) *DBBridge {
@@ -98,11 +101,16 @@ func NewBridge(nbrigde *NBridge) *DBBridge {
 		trx:           nbrigde.trx,
 		schemaPrefix:  nbrigde.SchemaPrefix,
 		schemaStorage: nbrigde.SchemaStorage,
-		middlewares:   nbrigde.middlewares,
+		prevValidate:  nbrigde.prevValidatemiddlewares,
+		postValidate:  nbrigde.postValidatemiddlewares,
 	}
 
-	if brigde.middlewares == nil {
-		brigde.middlewares = []Middleware{}
+	if brigde.prevValidate == nil {
+		brigde.prevValidate = []QueryMiddleware{}
+	}
+
+	if brigde.postValidate == nil {
+		brigde.postValidate = []QueryMiddleware{}
 	}
 
 	return brigde

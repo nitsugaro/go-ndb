@@ -18,7 +18,7 @@ func (dbb *DBBridge) BuildCreateQuery(createQuery *Query) (string, []any, error)
 		return "", nil, err
 	}
 
-	selectFields, err := createQuery.GetSelect(dbb.schemaPrefix)
+	selectFields, err := createQuery.GetFormattedFields(dbb.schemaPrefix)
 	if err != nil {
 		return "", nil, err
 	}
@@ -29,6 +29,10 @@ func (dbb *DBBridge) BuildCreateQuery(createQuery *Query) (string, []any, error)
 	)
 
 	if createQuery.RPayload != nil {
+		if err := dbb.runPrevValidateMiddlewares(createQuery); err != nil {
+			return "", nil, err
+		}
+
 		if err := dbb.ValidateSchema(createQuery.PSchema, CREATE, createQuery.RPayload); err != nil {
 			return "", nil, err
 		}
@@ -37,7 +41,7 @@ func (dbb *DBBridge) BuildCreateQuery(createQuery *Query) (string, []any, error)
 			return "", nil, ErrEmptyCreateData
 		}
 
-		if err := dbb.runMiddlewares(createQuery); err != nil {
+		if err := dbb.runPostValidateMiddlewares(createQuery); err != nil {
 			return "", nil, err
 		}
 

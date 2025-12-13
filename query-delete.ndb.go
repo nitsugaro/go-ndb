@@ -18,7 +18,7 @@ func (dbb *DBBridge) BuildDeleteQuery(deleteQuery *Query, returning bool) (strin
 		return "", nil, err
 	}
 
-	if err := dbb.runMiddlewares(deleteQuery); err != nil {
+	if err := dbb.runPrevValidateMiddlewares(deleteQuery); err != nil {
 		return "", nil, err
 	}
 
@@ -58,7 +58,7 @@ func (dbb *DBBridge) BuildDeleteQuery(deleteQuery *Query, returning bool) (strin
 	args = append(args, whereArgs...)
 
 	if returning {
-		selectFields, err := deleteQuery.GetSelect(dbb.schemaPrefix)
+		selectFields, err := deleteQuery.GetFormattedFields(dbb.schemaPrefix)
 		if err != nil {
 			return "", nil, err
 		}

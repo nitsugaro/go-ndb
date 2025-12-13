@@ -20,11 +20,15 @@ func (dbb *DBBridge) BuildUpdateQuery(updateQuery *Query, returning bool) (strin
 	}
 
 	if updateQuery.RPayload != nil {
+		if err := dbb.runPrevValidateMiddlewares(updateQuery); err != nil {
+			return "", nil, err
+		}
+
 		if err := dbb.ValidateSchema(updateQuery.PSchema, UPDATE, updateQuery.RPayload); err != nil {
 			return "", nil, err
 		}
 
-		if err := dbb.runMiddlewares(updateQuery); err != nil {
+		if err := dbb.runPostValidateMiddlewares(updateQuery); err != nil {
 			return "", nil, err
 		}
 
@@ -55,7 +59,7 @@ func (dbb *DBBridge) BuildUpdateQuery(updateQuery *Query, returning bool) (strin
 		args = append(args, whereArgs...)
 
 		if returning {
-			fields, err := updateQuery.GetSelect(dbb.schemaPrefix)
+			fields, err := updateQuery.GetFormattedFields(dbb.schemaPrefix)
 			if err != nil {
 				return "", nil, err
 			}
@@ -74,10 +78,6 @@ func (dbb *DBBridge) BuildUpdateQuery(updateQuery *Query, returning bool) (strin
 	}
 
 	if updateQuery.subQuery != nil {
-		if err := dbb.runMiddlewares(updateQuery); err != nil {
-			return "", nil, err
-		}
-
 		subSQL, subArgs, err := dbb.BuildReadQuery(updateQuery.subQuery.Query)
 		if err != nil {
 			return "", nil, err
@@ -111,7 +111,7 @@ func (dbb *DBBridge) BuildUpdateQuery(updateQuery *Query, returning bool) (strin
 		args = append(args, whereArgs...)
 
 		if returning {
-			fields, err := updateQuery.GetSelect(dbb.schemaPrefix)
+			fields, err := updateQuery.GetFormattedFields(dbb.schemaPrefix)
 			if err != nil {
 				return "", nil, err
 			}

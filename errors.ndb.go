@@ -17,4 +17,7 @@ var (
 	ErrInvalidListType          = errors.New("invalid list type")
 	ErrSchemaKeyNotFound        = errors.New("not found key in schema")
 	ErrInvalidQueryType         = errors.New("invalid query type operation")
+	ErrMissingWhereQuery        = errors.New("query operation must have a where condition")
+	ErrTableNotAllowedQuery     = errors.New("query table is forbidden on this bridge")
+	ErrEmptyPayloadQuery        = errors.New("query operation has an empty payload")
 )

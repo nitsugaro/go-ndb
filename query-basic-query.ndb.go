@@ -30,6 +30,18 @@ type Query struct {
 	subQuery *SubQuery
 }
 
+func newQuery(table string, typ QueryType) *Query {
+	return &Query{typ: typ, BasicSchema: &BasicSchema{PSchema: table}}
+}
+
+func NewReadQuery(table string) *Query { return newQuery(table, READ) }
+
+func NewCreateQuery(table string) *Query { return newQuery(table, CREATE) }
+
+func NewUpdateQuery(table string) *Query { return newQuery(table, UPDATE) }
+
+func NewDeleteQuery(table string) *Query { return newQuery(table, DELETE) }
+
 func (q *Query) Clone() *Query {
 	return &Query{
 		typ:      q.typ,
@@ -67,19 +79,7 @@ func (bt *BasicSchema) GetSchema(db *DBBridge) (string, error) {
 	return "\"" + db.GetSchemaPrefix() + bt.PSchema + "\"", nil
 }
 
-func newQuery(table string, typ QueryType) *Query {
-	return &Query{typ: typ, BasicSchema: &BasicSchema{PSchema: table}}
-}
-
-func NewReadQuery(table string) *Query { return newQuery(table, READ) }
-
-func NewCreateQuery(table string) *Query { return newQuery(table, CREATE) }
-
-func NewUpdateQuery(table string) *Query { return newQuery(table, UPDATE) }
-
-func NewDeleteQuery(table string) *Query { return newQuery(table, DELETE) }
-
-func (dbo *Query) GetSelect(schemaPrefix string) ([]string, error) {
+func (dbo *Query) GetFormattedFields(schemaPrefix string) ([]string, error) {
 	if len(dbo.PFields) == 0 {
 		return []string{"*"}, nil
 	}

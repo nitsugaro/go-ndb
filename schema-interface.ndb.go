@@ -1,139 +1,11 @@
 package ndb
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/nitsugaro/go-nstore"
 	goutils "github.com/nitsugaro/go-utils"
 )
-
-type ForeignKey struct {
-	PSchema   string         `json:"schema"`
-	PColumn   string         `json:"column"`
-	POnDelete ForeignKeyRule `json:"on_delete,omitempty"`
-	POnUpdate ForeignKeyRule `json:"on_update,omitempty"`
-	f         *SchemaField
-}
-
-func (fk *ForeignKey) OnUpdate(OnUpdate ForeignKeyRule) *ForeignKey {
-	fk.POnUpdate = OnUpdate
-	return fk
-}
-
-func (fk *ForeignKey) OnDelete(onDelete ForeignKeyRule) *ForeignKey {
-	fk.POnDelete = onDelete
-	return fk
-}
-
-func (fk *ForeignKey) DoneFK() *SchemaField {
-	return fk.f
-}
-
-func (fk *ForeignKey) Validate() error {
-	if len(fk.PSchema) == 0 || len(fk.PColumn) == 0 {
-		return errors.New("schema & column fields are required")
-	}
-
-	if err := IsSQLName(fk.PSchema); err != nil {
-		return err
-	}
-
-	if err := IsSQLName(fk.PColumn); err != nil {
-		return err
-	}
-
-	if fk.POnDelete != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.POnDelete }) {
-		return fmt.Errorf("invalid on delete clausure: %s", fk.POnDelete)
-	}
-
-	if fk.POnUpdate != "" && goutils.All(foreignKeyRules, func(fkr ForeignKeyRule, _ int) bool { return fkr != fk.POnUpdate }) {
-		return fmt.Errorf("invalid on update clausure: %s", fk.POnUpdate)
-	}
-
-	return nil
-}
-
-type SchemaField struct {
-	PName       string          `json:"name"`
-	PType       SchemaFieldType `json:"type"`
-	PMax        *int            `json:"max,omitempty"`
-	PMin        *int            `json:"min,omitempty"`
-	PNullable   bool            `json:"nullable"`
-	PUnique     bool            `json:"unique,omitempty"`
-	PDefault    *string         `json:"default,omitempty"`
-	PPrimaryKey bool            `json:"primary_key,omitempty"`
-	PForeignKey *ForeignKey     `json:"foreign_key,omitempty"`
-	PEnumValues []string        `json:"enum_values,omitempty"`
-	PPattern    *string         `json:"pattern,omitempty"`
-	PComment    string          `json:"comment,omitempty"`
-	PMetadata   M               `json:"metadata,omitempty"`
-	s           *Schema
-}
-
-func (f *SchemaField) Type(typ SchemaFieldType) *SchemaField {
-	f.PType = typ
-	return f
-}
-
-func (f *SchemaField) Max(max int) *SchemaField {
-	f.PMax = &max
-	return f
-}
-
-func (f *SchemaField) Min(min int) *SchemaField {
-	f.PMin = &min
-	return f
-}
-
-func (f *SchemaField) Nullable() *SchemaField {
-	f.PNullable = true
-	return f
-}
-
-func (f *SchemaField) Unique() *SchemaField {
-	f.PUnique = true
-	return f
-}
-
-func (f *SchemaField) PK() *SchemaField {
-	f.PPrimaryKey = true
-	return f
-}
-
-func (f *SchemaField) Pattern(pattern string) *SchemaField {
-	f.PPattern = &pattern
-	return f
-}
-
-func (f *SchemaField) Enum(values ...string) *SchemaField {
-	f.PEnumValues = values
-	return f
-}
-
-func (f *SchemaField) NewFK(schema string, column string) *ForeignKey {
-	f.PForeignKey = &ForeignKey{f: f, PSchema: schema, PColumn: column}
-
-	return f.PForeignKey
-}
-
-func (f *SchemaField) Default(defaultValue string) *SchemaField {
-	f.PDefault = &defaultValue
-	return f
-}
-
-func (f *SchemaField) DoneField() *Schema {
-	return f.s
-}
-
-func (f *SchemaField) Metadata(m M) *SchemaField {
-	f.PMetadata = m
-	return f
-}
-
-func (f *SchemaField) GetMetadata() goutils.TreeMapImpl {
-	return goutils.NewTreeMap(f.PMetadata)
-}
 
 type Schema struct {
 	*nstore.Metadata
@@ -145,7 +17,7 @@ type Schema struct {
 	PUniqueIndexes       [][]string     `json:"unique_indexes,omitempty"`
 	PCompositePrimaryKey []string       `json:"composite_primary_key,omitempty"`
 	PCompositeUniqueKeys [][]string     `json:"composite_unique_keys,omitempty"`
-	PMetadata            M              `json:"composite_unique_keys,omitempty"`
+	PMetadata            M              `json:"metadata,omitempty"`
 	err                  error          `json:"-"`
 }
 
@@ -154,7 +26,7 @@ func (s *Schema) GetName() string {
 }
 
 func NewSchema(name string) *Schema {
-	return &Schema{PName: name, PFields: []*SchemaField{}}
+	return &Schema{PName: name, PFields: []*SchemaField{}, PMetadata: M{}}
 }
 
 func (s *Schema) NewField(name string) *SchemaField {
