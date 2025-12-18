@@ -37,6 +37,18 @@ const (
 	FIELD_JSONB        SchemaFieldType = "JSONB"
 	FIELD_FLOAT        SchemaFieldType = "FLOAT"
 	FIELD_DOUBLE       SchemaFieldType = "DOUBLE PRECISION"
+
+	//Array
+	FIELD_SMALL_INT_ARRAY SchemaFieldType = "SMALLINT[]"
+	FIELD_INT_ARRAY       SchemaFieldType = "INT[]"
+	FIELD_BIG_INT_ARRAY   SchemaFieldType = "BIGINT[]"
+	FIELD_UUID_ARRAY      SchemaFieldType = "UUID[]"
+	FIELD_TEXT_ARRAY      SchemaFieldType = "TEXT[]"
+	FIELD_BOOLEAN_ARRAY   SchemaFieldType = "BOOLEAN[]"
+	FIELD_TIMESTAMP_ARRAY SchemaFieldType = "TIMESTAMP[]"
+	FIELD_JSONB_ARRAY     SchemaFieldType = "JSONB[]"
+	FIELD_FLOAT_ARRAY     SchemaFieldType = "FLOAT[]"
+	FIELD_DOUBLE_ARRAY    SchemaFieldType = "DOUBLE PRECISION[]"
 )
 
 type JoinType string

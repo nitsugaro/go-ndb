@@ -1,8 +1,8 @@
 package ndb
 
 import (
-	"encoding/json"
 	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -144,12 +144,70 @@ func (dbb *DBBridge) Read(readQuery *Query) ([]M, error) {
 	}
 }
 
-func (dbb *DBBridge) ReadB(readQuery *Query, v any) error {
-	if query, args, err := dbb.BuildReadQuery(readQuery); err != nil {
+func (dbb *DBBridge) ReadB(readQuery *Query, dest any) error {
+	query, args, err := dbb.BuildReadQuery(readQuery)
+	if err != nil {
 		return err
-	} else if bytes, err := dbb.ExecuteQueryBytes(query, true, args...); err != nil {
-		return err
-	} else {
-		return json.Unmarshal(bytes, v)
 	}
+
+	rows, err := dbb.queryRows(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	rv := reflect.ValueOf(dest)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return fmt.Errorf("dest must be non-nil pointer")
+	}
+	sliceVal := rv.Elem()
+	if sliceVal.Kind() != reflect.Slice {
+		return fmt.Errorf("dest must be pointer to slice")
+	}
+	elemType := sliceVal.Type().Elem()
+
+	if elemType.Kind() == reflect.Struct {
+		return scanIntoStructs(rows, dest)
+	}
+
+	if elemType.Kind() == reflect.Map &&
+		elemType.Key().Kind() == reflect.String &&
+		elemType.Elem().Kind() == reflect.Interface {
+		return scanIntoMaps(rows, dest)
+	}
+
+	return fmt.Errorf("unsupported ReadB target element type: %s", elemType.Kind().String())
+}
+
+func (dbb *DBBridge) ReadOneB(readOneQuery *Query, dest any) error {
+	q := readOneQuery.Limit(1)
+
+	query, args, err := dbb.BuildReadQuery(q)
+	if err != nil {
+		return err
+	}
+
+	rows, err := dbb.queryRows(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	rv := reflect.ValueOf(dest)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return fmt.Errorf("dest must be non-nil pointer")
+	}
+	elem := rv.Elem()
+
+	if elem.Kind() == reflect.Struct {
+		return scanOneIntoStruct(rows, dest)
+	}
+
+	if elem.Kind() == reflect.Map &&
+		elem.Type().Key().Kind() == reflect.String &&
+		elem.Type().Elem().Kind() == reflect.Interface {
+		return scanOneIntoMap(rows, dest)
+	}
+
+	return fmt.Errorf("unsupported ReadOneB target type: %s", elem.Kind().String())
 }

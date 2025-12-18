@@ -1,5 +1,5 @@
 {
     "ndb": {
-        "logging": true
+        "logging": false
     }
 }

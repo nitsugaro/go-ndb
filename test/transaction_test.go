@@ -17,9 +17,11 @@ type TrxUser struct {
 var trxUsersTable = ndb.NewSchema("trx_users").
 	Comment("Transaction test table").
 	Indexes("email").
-	NewField("id").Type(ndb.FIELD_BIG_SERIAL).PK().DoneField().
-	NewField("email").Type(ndb.FIELD_VARCHAR).Max(254).Unique().DoneField().
-	NewField("created_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").DoneField()
+	NewGroup("IDs").
+	NewField("id").Type(ndb.FIELD_BIG_SERIAL).PK().AsGroupMember().DoneField().
+	NewGroup("Additional Data").
+	NewField("email").Type(ndb.FIELD_VARCHAR).Max(254).Unique().AsGroupMember().DoneField().
+	NewField("created_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").AsGroupMember().DoneField()
 
 func countTrxUsers(t *testing.T) int64 {
 	t.Helper()

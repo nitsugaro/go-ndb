@@ -7,18 +7,29 @@ import (
 	goutils "github.com/nitsugaro/go-utils"
 )
 
+type SchemaGroup struct {
+	DisplayName string   `json:"display_name"`
+	Fields      []string `json:"fields"`
+}
+
 type Schema struct {
 	*nstore.Metadata
 	PName                string         `json:"name"`
 	PComment             string         `json:"comment,omitempty"`
-	PFields              []*SchemaField `json:"fields"`
+	PFields              []*SchemaField `json:"fields,omitempty"`
 	PExtensions          []string       `json:"extensions,omitempty"`
 	PIndexes             [][]string     `json:"indexes,omitempty"`
 	PUniqueIndexes       [][]string     `json:"unique_indexes,omitempty"`
 	PCompositePrimaryKey []string       `json:"composite_primary_key,omitempty"`
 	PCompositeUniqueKeys [][]string     `json:"composite_unique_keys,omitempty"`
 	PMetadata            M              `json:"metadata,omitempty"`
+	PGroups              []*SchemaGroup `json:"groups,omitempty"`
 	err                  error          `json:"-"`
+}
+
+func (s *Schema) NewGroup(name string) *Schema {
+	s.PGroups = append(s.PGroups, &SchemaGroup{DisplayName: name, Fields: []string{}})
+	return s
 }
 
 func (s *Schema) GetName() string {
@@ -26,7 +37,7 @@ func (s *Schema) GetName() string {
 }
 
 func NewSchema(name string) *Schema {
-	return &Schema{PName: name, PFields: []*SchemaField{}, PMetadata: M{}}
+	return &Schema{PName: name, PFields: []*SchemaField{}, PGroups: []*SchemaGroup{}, PMetadata: M{}}
 }
 
 func (s *Schema) NewField(name string) *SchemaField {

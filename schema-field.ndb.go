@@ -4,7 +4,8 @@ import goutils "github.com/nitsugaro/go-utils"
 
 type SchemaField struct {
 	PName        string          `json:"name"`
-	PDisplayName string          `json:"display_name"`
+	PDisplayName string          `json:"display_name,omitempty"`
+	PDescription string          `json:"description,omitempty"`
 	PType        SchemaFieldType `json:"type"`
 	PMax         *int            `json:"max,omitempty"`
 	PMin         *int            `json:"min,omitempty"`
@@ -20,6 +21,18 @@ type SchemaField struct {
 	s            *Schema
 }
 
+func (f *SchemaField) AsGroupMember() *SchemaField {
+	if len(f.s.PGroups) == 0 {
+		return f
+	}
+
+	lastGroup := f.s.PGroups[len(f.s.PGroups)-1]
+
+	lastGroup.Fields = append(lastGroup.Fields, f.GetName())
+
+	return f
+}
+
 func (f *SchemaField) GetName() string {
 	return f.PName
 }
@@ -30,6 +43,15 @@ func (f *SchemaField) GetDisplayName() string {
 
 func (f *SchemaField) DisplayName(displayName string) *SchemaField {
 	f.PDisplayName = displayName
+	return f
+}
+
+func (f *SchemaField) GetDescription(description string) string {
+	return f.PDescription
+}
+
+func (f *SchemaField) Description(description string) *SchemaField {
+	f.PDescription = description
 	return f
 }
 

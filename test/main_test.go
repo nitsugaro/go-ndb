@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"testing"
+	"time"
 
 	_ "github.com/lib/pq"
 	goconf "github.com/nitsugaro/go-conf"
@@ -33,6 +34,10 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(time.Minute * 5)
+
 	goconf.LoadConfig()
 
 	storage, err := nstore.New[*ndb.Schema](goconf.GetOpField("ndb.schema.folder", "schemas"))
@@ -43,7 +48,8 @@ func TestMain(m *testing.M) {
 	storage.LoadFromDisk()
 
 	bridge = ndb.NewBridge(&ndb.NBridge{DB: db, SchemaPrefix: "ndb_", SchemaStorage: storage})
-	bridge.AddMiddleware(ndb.QueryLoggingMiddleware, false)
-
+	/*
+		bridge.AddMiddleware(ndb.QueryLoggingMiddleware, false)
+	*/
 	m.Run()
 }
