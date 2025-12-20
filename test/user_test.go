@@ -190,6 +190,93 @@ func TestUser(t *testing.T) {
 		vinfo(t, "agg=%+v", agg)
 	})
 
+	must(t, "07_rest_query_create", func(t *testing.T) {
+		userName := "user_rest"
+		email := "user_rest@example.com"
+		createQuery, _ := ndb.NewQueryFromURIParams(usersTable.GetName(), "POST", map[string][]string{
+			"f": {"username,email"},
+		})
+
+		createQuery.Payload(ndb.M{"username": userName, "email": email, "public_id": uuid.NewString()})
+
+		result, err := bridge.CreateOne(createQuery)
+		if err != nil {
+			t.Fatalf("rest_query_create error creating user %s", err.Error())
+		}
+
+		if len(result) != 2 {
+			t.Fatalf("rest_query_create_mismatch map fields expected=2 actual=%q", len(result))
+		}
+
+		if result["username"].(string) != userName {
+			t.Fatalf("rest_query_create_mismatch username expected=%q actual=%q", userName, result["username"])
+		}
+
+		if result["email"].(string) != email {
+			t.Fatalf("rest_query_create_mismatch email expected=%q actual=%q", email, result["email"])
+		}
+	})
+
+	must(t, "08_rest_query_read", func(t *testing.T) {
+		userName := "user_rest"
+		readQuery, _ := ndb.NewQueryFromURIParams(usersTable.GetName(), "GET", map[string][]string{
+			"q": {`username/eq/"` + userName + `"`},
+			"f": {"email"},
+		})
+
+		result, err := bridge.Read(readQuery)
+		if err != nil {
+			t.Fatalf("rest_query_read error reading user %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("rest_query_read_mismatch map fields expected=1 actual=%q", len(result))
+		}
+	})
+
+	must(t, "09_rest_query_update", func(t *testing.T) {
+		newEmail := "newemail@example.com"
+		userName := "user_rest"
+		updateQuery, _ := ndb.NewQueryFromURIParams(usersTable.GetName(), "PUT", map[string][]string{
+			"q": {`username/eq/"` + userName + `"`},
+			"f": {"email"},
+		})
+
+		result, err := bridge.UpdateOneWithFields(updateQuery.Payload(ndb.M{"email": newEmail}))
+		if err != nil {
+			t.Fatalf("rest_query_update error updating user %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("rest_query_update_mismatch map fields expected=1 actual=%q", len(result))
+		}
+
+		if result["email"].(string) != newEmail {
+			t.Fatalf("rest_query_update_mismatch email expected=%q actual=%q", newEmail, result["email"])
+		}
+	})
+
+	must(t, "10_rest_delete_update", func(t *testing.T) {
+		newEmail := "newemail@example.com"
+		deleteQuery, _ := ndb.NewQueryFromURIParams(usersTable.GetName(), "DELETE", map[string][]string{
+			"q": {`email/eq/"` + newEmail + `"`},
+			"f": {"public_id"},
+		})
+
+		result, err := bridge.DeleteOneWithFields(deleteQuery.Payload(ndb.M{"email": newEmail}))
+		if err != nil {
+			t.Fatalf("rest_query_delete error updating user %s", err.Error())
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("rest_query_delete_mismatch map fields expected=1 actual=%q", len(result))
+		}
+
+		if _, ok := result["public_id"].(string); !ok {
+			t.Fatalf("rest_query_delete_mismatch expecte to get public_id field")
+		}
+	})
+
 	bridge.DeleteSchema(userPayments.GetName())
 	bridge.DeleteSchema(userType.GetName())
 	bridge.DeleteSchema(usersTable.GetName())
