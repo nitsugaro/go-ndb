@@ -2,6 +2,7 @@ package ndb
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/nitsugaro/go-nstore"
 	goutils "github.com/nitsugaro/go-utils"
@@ -153,4 +154,44 @@ func (f *Schema) AddMetadata(key string, val any) *Schema {
 
 func (f *Schema) GetSchemaMetadata() M {
 	return f.PMetadata
+}
+
+func (f *Schema) EnableRESTCollection(methods ...string) *Schema {
+	return f.AddMetadata("rest_collection", M{
+		"methods": methods,
+	})
+}
+
+func (f *Schema) EnableRESTResource(idField string, methods ...string) *Schema {
+	return f.AddMetadata("rest_resource", M{
+		"methods":  methods,
+		"id_field": idField,
+	})
+}
+
+func (f *Schema) isRESTMetohdSupported(key string, method string) bool {
+	m, ok := f.PMetadata[key].(M)
+	if !ok {
+		return false
+	}
+
+	methods, ok := m["methods"].([]string)
+	if !ok {
+		return false
+	}
+
+	return slices.Contains(methods, method)
+}
+
+func (f *Schema) IsRESTCollectionMethodSupported(method string) bool {
+	return f.isRESTMetohdSupported("rest_collection", method)
+}
+
+func (f *Schema) IsRESTResourceMethodSupported(method string) bool {
+	return f.isRESTMetohdSupported("rest_resource", method)
+}
+
+func (f *Schema) GetRESTResourceIDField() string {
+	m := f.GetSchemaMetadata()["rest_resource"].(M)
+	return m["id_field"].(string)
 }
