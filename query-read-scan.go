@@ -170,7 +170,10 @@ func scanOneIntoStruct(rows *sql.Rows, dest any) error {
 	ptrs, setters := makeScanPlan(cols, elemPtr.Type(), fieldIndex)
 
 	if !rows.Next() {
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		return sql.ErrNoRows
 	}
 	if err := rows.Scan(ptrs...); err != nil {
 		return err
