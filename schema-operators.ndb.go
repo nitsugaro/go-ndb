@@ -56,8 +56,11 @@ func (d *DBBridge) generateCreateSchemaSQL(t *Schema) string {
 		}
 
 		if len(f.PEnumValues) > 0 {
-			quoted := "'" + strings.Join(f.PEnumValues, "', '") + "'"
-			line += fmt.Sprintf(" CHECK (%s IN (%s))", f.PName, quoted)
+			if strings.Contains(string(f.PType), "[]") {
+				line += fmt.Sprintf(" CHECK (%s <@ ARRAY[%s]::%s)", f.PName, strings.Join(f.PEnumValues, ", "), f.PType)
+			} else {
+				line += fmt.Sprintf(" CHECK (%s IN (%s))", f.PName, strings.Join(f.PEnumValues, ", "))
+			}
 		}
 		if i < len(t.PFields)-1 {
 			line += ","

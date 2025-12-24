@@ -48,9 +48,7 @@ func validateString(val string, f *SchemaField) error {
 		return fmt.Errorf("field '%s': must be one of these values [%s]", f.PName, strings.Join(f.PEnumValues, ", "))
 	}
 
-	// FIX: time.Parse(layout, value) (antes estaba al revés)
 	if f.PType == FIELD_TIMESTAMP {
-		// Aceptá RFC3339Nano y RFC3339 (tu validateTime coercer ya lo hace)
 		if _, err := time.Parse(time.RFC3339Nano, val); err != nil {
 			if _, err2 := time.Parse(time.RFC3339, val); err2 != nil {
 				return fmt.Errorf("field '%s': invalid timestamp %s", f.PName, err2.Error())

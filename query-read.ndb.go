@@ -8,11 +8,28 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	goutils "github.com/nitsugaro/go-utils"
 )
 
 func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 	if readQuery.typ != READ {
 		return "", nil, ErrInvalidQueryType
+	}
+
+	var restConfig *RESTSchema
+	if readQuery.asRestCollection || readQuery.asRestResource {
+		schemaParts := strings.Split(readQuery.PSchema, ".")
+		schemaName := schemaParts[len(schemaParts)-1]
+		schema, ok := dbb.GetSchemaByName(schemaName)
+		if !ok {
+			return "", nil, ErrNotFoundTable
+		}
+
+		if readQuery.asRestCollection {
+			restConfig = schema.GetRESTCollecton()
+		} else {
+			restConfig = schema.GetRESTResource().RESTSchema
+		}
 	}
 
 	tableName, err := readQuery.GetSchema(dbb)
@@ -64,6 +81,19 @@ func (dbb *DBBridge) BuildReadQuery(readQuery *Query) (string, []any, error) {
 	}
 
 	for _, join := range readQuery.PJoins {
+		if restConfig != nil && !goutils.Some(restConfig.PAllowedJoinTables, func(j string, _ int) bool {
+			if j == "*" {
+				return true
+			}
+
+			parts := strings.SplitN(join.GetSchemaName(), ".", 1)
+			name := parts[len(parts)-1]
+
+			return name == j
+		}) {
+			return "", nil, ErrNotFoundJoinTable
+		}
+
 		joinTable, err := join.GetSchema(dbb)
 		if err != nil {
 			return "", nil, err

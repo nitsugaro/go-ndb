@@ -77,7 +77,6 @@ func applyJoin(q *Query, raw string) {
 		expr = parts[2]
 	}
 
-	fmt.Println(parts)
 	j := q.NewJoin(table, JoinType(typ))
 
 	if strings.TrimSpace(expr) != "" {

@@ -15,8 +15,10 @@ type SubQuery struct {
 }
 
 type Query struct {
-	*BasicSchema `json:"schema,omitempty"`
-	typ          QueryType
+	*BasicSchema     `json:"schema,omitempty"`
+	typ              QueryType
+	asRestResource   bool
+	asRestCollection bool
 
 	PFields  []*SQLField `json:"fields,omitempty"`
 	PWhere   []M         `json:"where,omitempty"`
@@ -41,6 +43,56 @@ func NewCreateQuery(table string) *Query { return newQuery(table, CREATE) }
 func NewUpdateQuery(table string) *Query { return newQuery(table, UPDATE) }
 
 func NewDeleteQuery(table string) *Query { return newQuery(table, DELETE) }
+
+// REST COLLECTION
+
+func NewRESTReadQueryCollection(table string) *Query {
+	q := newQuery(table, READ)
+	q.asRestCollection = true
+	return q
+}
+
+func NewRESTCreateQueryCollection(table string) *Query {
+	q := newQuery(table, CREATE)
+	q.asRestCollection = true
+	return q
+}
+
+func NewRESTUpdateQueryCollection(table string) *Query {
+	q := newQuery(table, UPDATE)
+	q.asRestCollection = true
+	return q
+}
+func NewRESTDeleteQueryCollection(table string) *Query {
+	q := newQuery(table, DELETE)
+	q.asRestCollection = true
+	return q
+}
+
+// REST RESOURCE
+
+func NewRESTReadQueryResouce(table string) *Query {
+	q := newQuery(table, READ)
+	q.asRestResource = true
+	return q
+}
+
+func NewRESTCreateQueryResouce(table string) *Query {
+	q := newQuery(table, CREATE)
+	q.asRestResource = true
+	return q
+}
+
+func NewRESTUpdateQueryResouce(table string) *Query {
+	q := newQuery(table, UPDATE)
+	q.asRestResource = true
+	return q
+}
+func NewRESTDeleteQueryResouce(table string) *Query {
+	q := newQuery(table, DELETE)
+	q.asRestResource = true
+	return q
+}
 
 func (q *Query) Clone() *Query {
 	return &Query{

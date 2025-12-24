@@ -13,19 +13,35 @@ type SchemaGroup struct {
 	Fields      []string `json:"fields"`
 }
 
+type RESTSchema struct {
+	PMethods           []string `json:"methods,omitempty"`
+	PAllowedJoinTables []string `json:"allowed_join_tables,omitempty"`
+	PAllowedFields     []string `json:"allowed_fields,omitempty"`
+	s                  *Schema
+}
+
+type RESTCollectionSchema = RESTSchema
+
+type RESTResourceSchema struct {
+	*RESTSchema
+	IDField string `json:"id_field"`
+}
+
 type Schema struct {
 	*nstore.Metadata
-	PName                string         `json:"name"`
-	PComment             string         `json:"comment,omitempty"`
-	PFields              []*SchemaField `json:"fields,omitempty"`
-	PExtensions          []string       `json:"extensions,omitempty"`
-	PIndexes             [][]string     `json:"indexes,omitempty"`
-	PUniqueIndexes       [][]string     `json:"unique_indexes,omitempty"`
-	PCompositePrimaryKey []string       `json:"composite_primary_key,omitempty"`
-	PCompositeUniqueKeys [][]string     `json:"composite_unique_keys,omitempty"`
-	PMetadata            M              `json:"metadata,omitempty"`
-	PGroups              []*SchemaGroup `json:"groups,omitempty"`
-	err                  error          `json:"-"`
+	PName                string                `json:"name"`
+	PComment             string                `json:"comment,omitempty"`
+	PFields              []*SchemaField        `json:"fields,omitempty"`
+	PExtensions          []string              `json:"extensions,omitempty"`
+	PIndexes             [][]string            `json:"indexes,omitempty"`
+	PUniqueIndexes       [][]string            `json:"unique_indexes,omitempty"`
+	PCompositePrimaryKey []string              `json:"composite_primary_key,omitempty"`
+	PCompositeUniqueKeys [][]string            `json:"composite_unique_keys,omitempty"`
+	PMetadata            M                     `json:"metadata,omitempty"`
+	PGroups              []*SchemaGroup        `json:"groups,omitempty"`
+	PRestCollection      *RESTCollectionSchema `json:"rest_collection,omitempty"`
+	PRestResource        *RESTResourceSchema   `json:"rest_resource,omitempty"`
+	err                  error                 `json:"-"`
 }
 
 func (s *Schema) NewGroup(name string) *Schema {
@@ -156,42 +172,79 @@ func (f *Schema) GetSchemaMetadata() M {
 	return f.PMetadata
 }
 
-func (f *Schema) EnableRESTCollection(methods ...string) *Schema {
-	return f.AddMetadata("rest_collection", M{
-		"methods": methods,
-	})
+func (s *Schema) EnableRESTCollection(methods ...string) *RESTCollectionSchema {
+	s.PRestCollection = &RESTCollectionSchema{
+		PMethods: methods,
+		s:        s,
+	}
+
+	return s.PRestCollection
 }
 
-func (f *Schema) EnableRESTResource(idField string, methods ...string) *Schema {
-	return f.AddMetadata("rest_resource", M{
-		"methods":  methods,
-		"id_field": idField,
-	})
+func (rc *RESTCollectionSchema) AllowedFields(fields ...string) *RESTCollectionSchema {
+	rc.PAllowedFields = fields
+	return rc
 }
 
-func (f *Schema) isRESTMetohdSupported(key string, method string) bool {
-	m, ok := f.PMetadata[key].(M)
-	if !ok {
+func (rc *RESTCollectionSchema) AllowedJoins(joins ...string) *RESTCollectionSchema {
+	rc.PAllowedJoinTables = joins
+	return rc
+}
+
+func (rc *RESTCollectionSchema) DoneRESTCollection() *Schema {
+	return rc.s
+}
+
+func (s *Schema) EnableRESTResource(IDField string, methods ...string) *RESTResourceSchema {
+	s.PRestResource = &RESTResourceSchema{
+		IDField: IDField,
+		RESTSchema: &RESTSchema{
+			PMethods: methods,
+			s:        s,
+		},
+	}
+
+	return s.PRestResource
+}
+
+func (rc *RESTResourceSchema) AllowedFields(fields ...string) *RESTResourceSchema {
+	rc.PAllowedFields = fields
+	return rc
+}
+
+func (rc *RESTResourceSchema) AllowedJoins(joins ...string) *RESTResourceSchema {
+	rc.PAllowedJoinTables = joins
+	return rc
+}
+
+func (s *Schema) GetRESTCollecton() *RESTCollectionSchema {
+	return s.PRestCollection
+}
+
+func (s *Schema) GetRESTResource() *RESTResourceSchema {
+	return s.PRestResource
+}
+
+func (rc *RESTResourceSchema) DoneRESTResource() *Schema {
+	return rc.s
+}
+
+func (f *Schema) isRESTMetohdSupported(restSchema *RESTSchema, method string) bool {
+	if restSchema == nil {
 		return false
 	}
 
-	methods, ok := m["methods"].([]string)
-	if !ok {
-		return false
-	}
-
-	return slices.Contains(methods, method)
+	return slices.Contains(restSchema.PMethods, method)
 }
 
 func (f *Schema) IsRESTCollectionMethodSupported(method string) bool {
-	return f.isRESTMetohdSupported("rest_collection", method)
+	return f.isRESTMetohdSupported(f.PRestCollection, method)
 }
 
 func (f *Schema) IsRESTResourceMethodSupported(method string) bool {
-	return f.isRESTMetohdSupported("rest_resource", method)
+	return f.isRESTMetohdSupported(f.PRestResource.RESTSchema, method)
 }
 
 func (f *Schema) GetRESTResourceIDField() string {
-	m := f.GetSchemaMetadata()["rest_resource"].(M)
-	return m["id_field"].(string)
+	return f.PRestResource.IDField
 }

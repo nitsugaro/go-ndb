@@ -58,7 +58,8 @@ var userPayments = ndb.NewSchema("user_payments").
 	NewField("id").Type(ndb.FIELD_BIG_SERIAL).PK().DoneField().
 	NewField("user_id").Type(ndb.FIELD_BIG_INT).Nullable().NewFK(usersTable.GetName(), "id").OnDelete(ndb.CASCADE).DoneFK().DoneField().
 	NewField("amount").Type(ndb.FIELD_FLOAT).Nullable().DoneField().
-	NewField("created_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").Nullable().DoneField()
+	NewField("created_at").Type(ndb.FIELD_TIMESTAMP).Default("now()").Nullable().DoneField().
+	NewField("arr_field").Type(ndb.FIELD_SMALL_INT_ARRAY).Enum("0", "1", "2").Nullable().DoneField()
 
 /* -------------------------------------------------
    TEST CASE
@@ -274,6 +275,27 @@ func TestUser(t *testing.T) {
 
 		if _, ok := result["public_id"].(string); !ok {
 			t.Fatalf("rest_query_delete_mismatch expecte to get public_id field")
+		}
+	})
+
+	must(t, "11_arr_field_ok", func(t *testing.T) {
+		if _, err := bridge.Create(ndb.NewCreateQuery(userPayments.GetName()).Payload(ndb.M{
+			"user_id":   userB.ID,
+			"amount":    12.0,
+			"arr_field": []int16{1},
+		})); err != nil {
+			t.Fatalf("arr_field insert error: %v", err)
+		}
+	})
+
+	must(t, "12_arr_field_rejects", func(t *testing.T) {
+		_, err := bridge.Create(ndb.NewCreateQuery(userPayments.GetName()).Payload(ndb.M{
+			"user_id":   userB.ID,
+			"amount":    12.0,
+			"arr_field": []int16{10},
+		}))
+		if err == nil {
+			t.Fatalf("expected enum constraint error, got nil")
 		}
 	})
 
