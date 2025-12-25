@@ -9,6 +9,6 @@ func (b *DBBridge) ReadOne(readOneQuery *Query) (M, error) {
 	if len(result) == 1 {
 		return result[0], nil
 	} else {
-		return nil, nil
+		return nil, ErrNotFoundRecord
 	}
 }

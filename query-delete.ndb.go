@@ -90,8 +90,10 @@ func (dbb *DBBridge) DeleteOneWithFields(Query *Query) (M, error) {
 		return nil, err
 	}
 
-	if result, err := dbb.ExecuteQuery(query, args...); err != nil || len(result) == 0 {
+	if result, err := dbb.ExecuteQuery(query, args...); err != nil {
 		return nil, err
+	} else if len(result) == 0 {
+		return nil, ErrNotFoundRecord
 	} else {
 		return result[0], nil
 	}

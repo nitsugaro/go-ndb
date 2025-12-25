@@ -3,6 +3,7 @@ package ndb
 import "errors"
 
 var (
+	ErrNotFoundRecord           = errors.New("not found records on query")
 	ErrNotFoundTable            = errors.New("not found table in query config")
 	ErrNotFoundJoinTable        = errors.New("required join table in query config")
 	ErrConvert                  = errors.New("cannot convert value from sql query")
